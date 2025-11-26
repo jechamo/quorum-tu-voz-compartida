@@ -216,13 +216,24 @@ export const QuestionsManagement = () => {
             </div>
 
             <div>
-              <Label htmlFor="week">Fecha inicio semana</Label>
+              <Label htmlFor="week">Lunes de la semana</Label>
               <Input
                 id="week"
                 type="date"
                 value={weekStartDate}
-                onChange={(e) => setWeekStartDate(e.target.value)}
+                onChange={(e) => {
+                  const selectedDate = new Date(e.target.value + 'T00:00:00');
+                  const dayOfWeek = selectedDate.getDay();
+                  // Calculate days to subtract to get to Monday (day 1)
+                  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                  const monday = new Date(selectedDate);
+                  monday.setDate(selectedDate.getDate() + diff);
+                  setWeekStartDate(monday.toISOString().split('T')[0]);
+                }}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Se ajustará automáticamente al lunes de la semana seleccionada
+              </p>
             </div>
           </div>
 
