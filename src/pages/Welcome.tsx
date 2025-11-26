@@ -37,15 +37,9 @@ export default function Welcome() {
         <div className="flex justify-center">
           <button
             onClick={() => navigate('/auth')}
-            className="relative group overflow-hidden rounded-lg font-semibold text-lg px-12 py-4 transition-all hover:scale-105"
+            className="bg-gradient-to-r from-[#F4C430] to-[#2D6A4F] text-white rounded-lg font-semibold text-lg px-12 py-4 transition-all hover:opacity-90 hover:scale-105 font-display font-bold"
           >
-            <div className="absolute inset-0 flex">
-              <div className="w-1/2 bg-[#F4C430]" />
-              <div className="w-1/2 bg-[#2D6A4F]" />
-            </div>
-            <span className="relative z-10 text-background font-display font-bold">
-              Acceder
-            </span>
+            Acceder
           </button>
         </div>
       </div>
