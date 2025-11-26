@@ -65,7 +65,7 @@ export default function Politica() {
           </TabsContent>
 
           <TabsContent value="history">
-            <WeeklyHistory module="politica" />
+            <WeeklyHistory module="politica" userId={user.id} />
           </TabsContent>
         </Tabs>
       </main>
