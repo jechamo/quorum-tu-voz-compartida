@@ -96,7 +96,7 @@ export default function AuthModule() {
         title: "¡Bienvenido!",
         description: "Has iniciado sesión correctamente",
       });
-      navigate('/');
+      navigate('/home');
     } catch (error: any) {
       toast({
         title: "Error al iniciar sesión",
@@ -152,7 +152,7 @@ export default function AuthModule() {
         title: "¡Cuenta creada!",
         description: "Tu cuenta ha sido creada correctamente",
       });
-      navigate('/');
+      navigate('/home');
     } catch (error: any) {
       toast({
         title: "Error al registrarse",
