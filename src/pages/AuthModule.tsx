@@ -15,7 +15,7 @@ import { useInitializeAdmin } from "@/hooks/useInitializeAdmin";
 import { ArrowLeft } from "lucide-react";
 
 export default function AuthModule() {
-  const { module } = useParams<{ module: "politica" | "futbol" }>();
+  const { module } = useParams<{ module?: "politica" | "futbol" }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -38,9 +38,10 @@ export default function AuthModule() {
   const [selectedTeam, setSelectedTeam] = useState("");
 
   const isPolitica = module === "politica";
+  const isGeneral = !module;
   const moduleColor = isPolitica ? "primary" : "secondary";
-  const moduleTitle = isPolitica ? "Política" : "La Liga";
-  const moduleIcon = isPolitica ? (
+  const moduleTitle = isPolitica ? "Política" : isGeneral ? "" : "La Liga";
+  const moduleIcon = isGeneral ? null : isPolitica ? (
     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         strokeLinecap="round"
@@ -59,13 +60,6 @@ export default function AuthModule() {
       />
     </svg>
   );
-
-  useEffect(() => {
-    if (!module || (module !== "politica" && module !== "futbol")) {
-      navigate("/");
-      return;
-    }
-  }, [module, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -165,9 +159,10 @@ export default function AuthModule() {
         age: ageNum,
       };
 
-      if (isPolitica && selectedParty) {
+      if (selectedParty) {
         signupData.partyId = selectedParty;
-      } else if (!isPolitica && selectedTeam) {
+      }
+      if (selectedTeam) {
         signupData.teamId = selectedTeam;
       }
 
@@ -198,15 +193,23 @@ export default function AuthModule() {
         </Button>
 
         <div className="flex flex-col items-center mb-6 space-y-4">
-          <div
-            className={`w-16 h-16 rounded-2xl ${isPolitica ? "bg-primary/10" : "bg-secondary/10"} flex items-center justify-center ${isPolitica ? "text-primary" : "text-secondary"}`}
-          >
-            {moduleIcon}
-          </div>
+          {!isGeneral && (
+            <div
+              className={`w-16 h-16 rounded-2xl ${isPolitica ? "bg-primary/10" : "bg-secondary/10"} flex items-center justify-center ${isPolitica ? "text-primary" : "text-secondary"}`}
+            >
+              {moduleIcon}
+            </div>
+          )}
           <div className="text-center">
-            <h1 className="text-2xl font-display font-bold text-foreground">QUORUM {moduleTitle}</h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">
+              QUORUM {moduleTitle}
+            </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {isPolitica ? "Encuestas de política española" : "Encuestas de fútbol español"}
+              {isGeneral 
+                ? "Inicia sesión o crea tu cuenta" 
+                : isPolitica 
+                  ? "Encuestas de política española" 
+                  : "Encuestas de fútbol español"}
             </p>
           </div>
         </div>
@@ -242,7 +245,7 @@ export default function AuthModule() {
               </div>
               <Button
                 type="submit"
-                className={`w-full ${isPolitica ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"}`}
+                className={`w-full ${isGeneral ? "bg-accent hover:bg-accent/90" : isPolitica ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"}`}
                 disabled={loading}
               >
                 {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
@@ -313,7 +316,7 @@ export default function AuthModule() {
                 </div>
               </div>
 
-              {isPolitica && (
+              {(isPolitica || isGeneral) && (
                 <div className="space-y-2">
                   <Label htmlFor="party">Partido político (opcional)</Label>
                   <Select value={selectedParty} onValueChange={setSelectedParty} disabled={loading}>
@@ -331,7 +334,7 @@ export default function AuthModule() {
                 </div>
               )}
 
-              {!isPolitica && (
+              {(!isPolitica || isGeneral) && (
                 <div className="space-y-2">
                   <Label htmlFor="team">Equipo (opcional)</Label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam} disabled={loading}>
@@ -351,7 +354,7 @@ export default function AuthModule() {
 
               <Button
                 type="submit"
-                className={`w-full ${isPolitica ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"}`}
+                className={`w-full ${isGeneral ? "bg-accent hover:bg-accent/90" : isPolitica ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"}`}
                 disabled={loading}
               >
                 {loading ? "Creando cuenta..." : "Crear Cuenta"}
