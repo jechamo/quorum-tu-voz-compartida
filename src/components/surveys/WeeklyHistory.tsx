@@ -51,17 +51,17 @@ export const WeeklyHistory = ({ module }: WeeklyHistoryProps) => {
     if (questions) {
       const questionsWithResults = await Promise.all(
         questions.map(async (question) => {
-          const { data: answersData } = await supabase
-            .from('user_answers')
-            .select('answer_option_id')
-            .eq('question_id', question.id);
+          const { data: statsData } = await supabase
+            .rpc('get_question_stats', { question_uuid: question.id });
 
-          const total = answersData?.length || 0;
-          const options = question.answer_options.map((opt: any) => ({
-            ...opt,
-            count: answersData?.filter(a => a.answer_option_id === opt.id).length || 0,
-            percentage: total > 0 ? Math.round((answersData?.filter(a => a.answer_option_id === opt.id).length || 0) / total * 100) : 0,
-          }));
+          const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
+          const options = statsData?.map(stat => ({
+            id: stat.option_id,
+            text: stat.option_text,
+            option_order: stat.option_order,
+            count: Number(stat.vote_count),
+            percentage: stat.percentage,
+          })) || [];
 
           return { ...question, results: { options, total } };
         })

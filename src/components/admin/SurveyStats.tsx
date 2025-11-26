@@ -25,19 +25,17 @@ export const SurveyStats = () => {
 
     if (politicaQuestions) {
       const statsPromises = politicaQuestions.map(async (q) => {
-        const { data: answers } = await supabase
-          .from('user_answers')
-          .select('answer_option_id')
-          .eq('question_id', q.id);
+        const { data: statsData } = await supabase
+          .rpc('get_question_stats', { question_uuid: q.id });
 
-        const total = answers?.length || 0;
-        const optionsWithPercentage = q.answer_options.map((opt: any) => ({
-          ...opt,
-          count: answers?.filter((a) => a.answer_option_id === opt.id).length || 0,
-          percentage: total > 0
-            ? Math.round((answers?.filter((a) => a.answer_option_id === opt.id).length || 0) / total * 100)
-            : 0,
-        }));
+        const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
+        const optionsWithPercentage = statsData?.map(stat => ({
+          id: stat.option_id,
+          text: stat.option_text,
+          option_order: stat.option_order,
+          count: Number(stat.vote_count),
+          percentage: stat.percentage,
+        })) || [];
 
         return {
           ...q,
@@ -59,19 +57,17 @@ export const SurveyStats = () => {
 
     if (futbolQuestions) {
       const statsPromises = futbolQuestions.map(async (q) => {
-        const { data: answers } = await supabase
-          .from('user_answers')
-          .select('answer_option_id')
-          .eq('question_id', q.id);
+        const { data: statsData } = await supabase
+          .rpc('get_question_stats', { question_uuid: q.id });
 
-        const total = answers?.length || 0;
-        const optionsWithPercentage = q.answer_options.map((opt: any) => ({
-          ...opt,
-          count: answers?.filter((a) => a.answer_option_id === opt.id).length || 0,
-          percentage: total > 0
-            ? Math.round((answers?.filter((a) => a.answer_option_id === opt.id).length || 0) / total * 100)
-            : 0,
-        }));
+        const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
+        const optionsWithPercentage = statsData?.map(stat => ({
+          id: stat.option_id,
+          text: stat.option_text,
+          option_order: stat.option_order,
+          count: Number(stat.vote_count),
+          percentage: stat.percentage,
+        })) || [];
 
         return {
           ...q,
