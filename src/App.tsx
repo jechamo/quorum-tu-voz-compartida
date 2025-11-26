@@ -24,6 +24,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Welcome />} />
             <Route path="/home" element={<Index />} />
+            <Route path="/auth" element={<AuthModule />} />
             <Route path="/auth/:module" element={<AuthModule />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/politica" element={<Politica />} />
