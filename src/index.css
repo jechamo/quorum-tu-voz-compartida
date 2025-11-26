@@ -8,82 +8,47 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
 
-    /* Política: Rojo institucional */
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 100%;
+    /* Política: Amarillo mostaza */
+    --primary: 43 96% 56%;
+    --primary-foreground: 240 10% 3.9%;
     
-    /* La Liga: Verde campo */
-    --secondary: 142 71% 45%;
+    /* Fútbol: Verde suave */
+    --secondary: 142 40% 45%;
     --secondary-foreground: 0 0% 100%;
 
-    /* Azul institucional para elementos secundarios */
-    --accent: 221 83% 53%;
-    --accent-foreground: 0 0% 100%;
+    /* Acento neutro */
+    --accent: 240 10% 12%;
+    --accent-foreground: 0 0% 98%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 240 10% 12%;
+    --muted-foreground: 240 5% 65%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 0 72% 51%;
+    --border: 240 10% 18%;
+    --input: 240 10% 12%;
+    --ring: 43 96% 56%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Gradientes personalizados */
-    --gradient-politica: linear-gradient(135deg, hsl(0 72% 51%) 0%, hsl(221 83% 53%) 100%);
-    --gradient-futbol: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(173 80% 40%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 40% 98%) 100%);
-
-    /* Sombras elevadas */
-    --shadow-card: 0 2px 8px -2px hsl(222 47% 11% / 0.08);
-    --shadow-elevated: 0 8px 24px -4px hsl(222 47% 11% / 0.12);
-    --shadow-politica: 0 4px 16px -2px hsl(0 72% 51% / 0.2);
-    --shadow-futbol: 0 4px 16px -2px hsl(142 71% 45% / 0.2);
+    /* Sombras sutiles */
+    --shadow-card: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-elevated: 0 8px 24px -4px hsl(0 0% 0% / 0.4);
+    --shadow-politica: 0 4px 16px -2px hsl(43 96% 56% / 0.15);
+    --shadow-futbol: 0 4px 16px -2px hsl(142 40% 45% / 0.15);
 
     /* Transiciones */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .dark {
-    --background: 222 47% 11%;
-    --foreground: 0 0% 98%;
-
-    --card: 217 33% 17%;
-    --card-foreground: 0 0% 98%;
-
-    --popover: 217 33% 17%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 142 71% 45%;
-    --secondary-foreground: 0 0% 100%;
-
-    --accent: 221 83% 53%;
-    --accent-foreground: 0 0% 100%;
-
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 0 72% 51%;
   }
 }
 
@@ -102,16 +67,12 @@ All colors MUST be HSL.
 }
 
 @layer utilities {
-  .gradient-politica {
-    background: var(--gradient-politica);
+  .bg-politica {
+    background-color: hsl(var(--primary));
   }
   
-  .gradient-futbol {
-    background: var(--gradient-futbol);
-  }
-  
-  .gradient-hero {
-    background: var(--gradient-hero);
+  .bg-futbol {
+    background-color: hsl(var(--secondary));
   }
 
   .shadow-card {
@@ -120,6 +81,14 @@ All colors MUST be HSL.
 
   .shadow-elevated {
     box-shadow: var(--shadow-elevated);
+  }
+
+  .shadow-politica {
+    box-shadow: var(--shadow-politica);
+  }
+
+  .shadow-futbol {
+    box-shadow: var(--shadow-futbol);
   }
 
   .transition-smooth {

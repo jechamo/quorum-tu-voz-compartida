@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,11 @@ import { signIn, signUp, SignUpData } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useEffect } from "react";
 import { useInitializeAdmin } from "@/hooks/useInitializeAdmin";
+import { ArrowLeft } from "lucide-react";
 
-export default function Auth() {
+export default function AuthModule() {
+  const { module } = useParams<{ module: 'politica' | 'futbol' }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -35,7 +36,26 @@ export default function Auth() {
   const [age, setAge] = useState("");
   const [selectedParty, setSelectedParty] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
-  const [module, setModule] = useState<'politica' | 'futbol'>('politica');
+
+  const isPolitica = module === 'politica';
+  const moduleColor = isPolitica ? 'primary' : 'secondary';
+  const moduleTitle = isPolitica ? 'Política' : 'La Liga';
+  const moduleIcon = isPolitica ? (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+  ) : (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+    </svg>
+  );
+
+  useEffect(() => {
+    if (!module || (module !== 'politica' && module !== 'futbol')) {
+      navigate('/');
+      return;
+    }
+  }, [module, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -120,9 +140,9 @@ export default function Auth() {
         age: ageNum,
       };
 
-      if (module === 'politica' && selectedParty) {
+      if (isPolitica && selectedParty) {
         signupData.partyId = selectedParty;
-      } else if (module === 'futbol' && selectedTeam) {
+      } else if (!isPolitica && selectedTeam) {
         signupData.teamId = selectedTeam;
       }
 
@@ -145,10 +165,30 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen gradient-hero flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-8 shadow-elevated">
-        <div className="flex justify-center mb-6">
-          <Logo />
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md p-8 shadow-elevated bg-card">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/')}
+          className="mb-4 -ml-2"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver
+        </Button>
+
+        <div className="flex flex-col items-center mb-6 space-y-4">
+          <div className={`w-16 h-16 rounded-2xl ${isPolitica ? 'bg-primary/10' : 'bg-secondary/10'} flex items-center justify-center ${isPolitica ? 'text-primary' : 'text-secondary'}`}>
+            {moduleIcon}
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-display font-bold text-foreground">
+              QUORUM {moduleTitle}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isPolitica ? 'Encuestas de política española' : 'Encuestas de fútbol español'}
+            </p>
+          </div>
         </div>
 
         <Tabs defaultValue="login" className="w-full">
@@ -180,7 +220,11 @@ export default function Auth() {
                   disabled={loading}
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button 
+                type="submit" 
+                className={`w-full ${isPolitica ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-secondary hover:bg-secondary/90 text-secondary-foreground'}`}
+                disabled={loading}
+              >
                 {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
               </Button>
             </form>
@@ -249,20 +293,7 @@ export default function Auth() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="module">Módulo preferido</Label>
-                <Select value={module} onValueChange={(v: any) => setModule(v)} disabled={loading}>
-                  <SelectTrigger id="module">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="politica">QUORUM Política</SelectItem>
-                    <SelectItem value="futbol">QUORUM La Liga</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {module === 'politica' && (
+              {isPolitica && (
                 <div className="space-y-2">
                   <Label htmlFor="party">Partido político (opcional)</Label>
                   <Select value={selectedParty} onValueChange={setSelectedParty} disabled={loading}>
@@ -280,7 +311,7 @@ export default function Auth() {
                 </div>
               )}
 
-              {module === 'futbol' && (
+              {!isPolitica && (
                 <div className="space-y-2">
                   <Label htmlFor="team">Equipo (opcional)</Label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam} disabled={loading}>
@@ -298,7 +329,11 @@ export default function Auth() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button 
+                type="submit" 
+                className={`w-full ${isPolitica ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-secondary hover:bg-secondary/90 text-secondary-foreground'}`}
+                disabled={loading}
+              >
                 {loading ? "Creando cuenta..." : "Crear Cuenta"}
               </Button>
             </form>

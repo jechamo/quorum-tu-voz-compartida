@@ -4,8 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import Welcome from "./pages/Welcome";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
+import AuthModule from "./pages/AuthModule";
 import Politica from "./pages/Politica";
 import Futbol from "./pages/Futbol";
 import NotFound from "./pages/NotFound";
@@ -20,8 +21,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<Welcome />} />
+            <Route path="/home" element={<Index />} />
+            <Route path="/auth/:module" element={<AuthModule />} />
             <Route path="/politica" element={<Politica />} />
             <Route path="/futbol" element={<Futbol />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
