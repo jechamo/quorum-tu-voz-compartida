@@ -69,7 +69,7 @@ export default function AuthModule() {
 
   useEffect(() => {
     if (user) {
-      navigate("/");
+      navigate("/home");
     }
   }, [user, navigate]);
 
