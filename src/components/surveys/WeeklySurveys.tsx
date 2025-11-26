@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2 } from "lucide-react";
 import { getCurrentWeekStart } from "@/lib/dateUtils";
+import { StatsFilters, FilterState } from "./StatsFilters";
 
 interface WeeklySurveysProps {
   module: 'politica' | 'futbol';
@@ -19,11 +20,25 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   const [userAnswers, setUserAnswers] = useState<Record<string, any>>({});
   const [results, setResults] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    partyId: null,
+    teamId: null,
+    gender: null,
+    ageMin: null,
+    ageMax: null,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
     loadWeeklyQuestions();
   }, [module, userId]);
+
+  useEffect(() => {
+    // Reload results when filters change
+    Object.keys(userAnswers).forEach(questionId => {
+      loadResults(questionId);
+    });
+  }, [filters]);
 
   const loadWeeklyQuestions = async () => {
     const weekStart = getCurrentWeekStart();
@@ -62,7 +77,14 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
 
   const loadResults = async (questionId: string) => {
     const { data: statsData, error } = await supabase
-      .rpc('get_question_stats', { question_uuid: questionId });
+      .rpc('get_question_stats_filtered', {
+        question_uuid: questionId,
+        filter_party_id: filters.partyId,
+        filter_team_id: filters.teamId,
+        filter_gender: filters.gender as any,
+        filter_age_min: filters.ageMin,
+        filter_age_max: filters.ageMax,
+      });
 
     if (statsData && !error) {
       const total = statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
@@ -143,6 +165,8 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
           {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
         </span>
       </div>
+
+      <StatsFilters module={module} onFiltersChange={setFilters} />
 
       {questions.map((question) => {
         const hasAnswered = !!userAnswers[question.id];

@@ -65,7 +65,7 @@ export default function Futbol() {
           </TabsContent>
 
           <TabsContent value="history">
-            <WeeklyHistory module="futbol" />
+            <WeeklyHistory module="futbol" userId={user.id} />
           </TabsContent>
         </Tabs>
       </main>

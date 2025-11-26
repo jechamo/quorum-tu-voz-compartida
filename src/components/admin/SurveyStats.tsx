@@ -4,14 +4,29 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentWeekStart } from "@/lib/dateUtils";
 import { BarChart3 } from "lucide-react";
+import { StatsFilters, FilterState } from "../surveys/StatsFilters";
 
 export const SurveyStats = () => {
   const [politicaStats, setPoliticaStats] = useState<any[]>([]);
   const [futbolStats, setFutbolStats] = useState<any[]>([]);
+  const [politicaFilters, setPoliticaFilters] = useState<FilterState>({
+    partyId: null,
+    teamId: null,
+    gender: null,
+    ageMin: null,
+    ageMax: null,
+  });
+  const [futbolFilters, setFutbolFilters] = useState<FilterState>({
+    partyId: null,
+    teamId: null,
+    gender: null,
+    ageMin: null,
+    ageMax: null,
+  });
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [politicaFilters, futbolFilters]);
 
   const loadStats = async () => {
     const weekStart = getCurrentWeekStart();
@@ -26,7 +41,14 @@ export const SurveyStats = () => {
     if (politicaQuestions) {
       const statsPromises = politicaQuestions.map(async (q) => {
         const { data: statsData } = await supabase
-          .rpc('get_question_stats', { question_uuid: q.id });
+          .rpc('get_question_stats_filtered', {
+            question_uuid: q.id,
+            filter_party_id: politicaFilters.partyId,
+            filter_team_id: politicaFilters.teamId,
+            filter_gender: politicaFilters.gender as any,
+            filter_age_min: politicaFilters.ageMin,
+            filter_age_max: politicaFilters.ageMax,
+          });
 
         const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
         const optionsWithPercentage = statsData?.map(stat => ({
@@ -58,7 +80,14 @@ export const SurveyStats = () => {
     if (futbolQuestions) {
       const statsPromises = futbolQuestions.map(async (q) => {
         const { data: statsData } = await supabase
-          .rpc('get_question_stats', { question_uuid: q.id });
+          .rpc('get_question_stats_filtered', {
+            question_uuid: q.id,
+            filter_party_id: futbolFilters.partyId,
+            filter_team_id: futbolFilters.teamId,
+            filter_gender: futbolFilters.gender as any,
+            filter_age_min: futbolFilters.ageMin,
+            filter_age_max: futbolFilters.ageMax,
+          });
 
         const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
         const optionsWithPercentage = statsData?.map(stat => ({
@@ -81,21 +110,21 @@ export const SurveyStats = () => {
     }
   };
 
-  const StatsContent = ({ stats, color }: { stats: any[]; color: string }) => {
-    if (stats.length === 0) {
-      return (
-        <Card className="p-8 text-center bg-card">
-          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">
-            No hay estadísticas disponibles para esta semana
-          </p>
-        </Card>
-      );
-    }
-
+  const StatsContent = ({ stats, color, module, onFiltersChange }: { stats: any[]; color: string; module: 'politica' | 'futbol'; onFiltersChange: (filters: FilterState) => void }) => {
     return (
       <div className="space-y-6">
-        {stats.map((question) => (
+        <StatsFilters module={module} onFiltersChange={onFiltersChange} />
+        
+        {stats.length === 0 ? (
+          <Card className="p-8 text-center bg-card">
+            <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              No hay estadísticas disponibles para esta semana
+            </p>
+          </Card>
+        ) : (
+          <>
+            {stats.map((question) => (
           <Card key={question.id} className="p-6 bg-card">
             <div className="space-y-4">
               <div>
@@ -134,7 +163,9 @@ export const SurveyStats = () => {
               </div>
             </div>
           </Card>
-        ))}
+            ))}
+          </>
+        )}
       </div>
     );
   };
@@ -157,11 +188,11 @@ export const SurveyStats = () => {
         </TabsList>
 
         <TabsContent value="politica" className="mt-6">
-          <StatsContent stats={politicaStats} color="bg-primary" />
+          <StatsContent stats={politicaStats} color="bg-primary" module="politica" onFiltersChange={setPoliticaFilters} />
         </TabsContent>
 
         <TabsContent value="futbol" className="mt-6">
-          <StatsContent stats={futbolStats} color="bg-secondary" />
+          <StatsContent stats={futbolStats} color="bg-secondary" module="futbol" onFiltersChange={setFutbolFilters} />
         </TabsContent>
       </Tabs>
     </div>
