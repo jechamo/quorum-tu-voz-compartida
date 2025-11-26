@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2 } from "lucide-react";
+import { getCurrentWeekStart } from "@/lib/dateUtils";
 
 export const QuestionsManagement = () => {
   const [questions, setQuestions] = useState<any[]>([]);
@@ -22,7 +23,7 @@ export const QuestionsManagement = () => {
   const [scope, setScope] = useState<'general' | 'specific'>('general');
   const [selectedParty, setSelectedParty] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
-  const [weekStartDate, setWeekStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [weekStartDate, setWeekStartDate] = useState(getCurrentWeekStart());
   const [isMandatory, setIsMandatory] = useState(false);
   const [options, setOptions] = useState<string[]>(["", ""]);
 

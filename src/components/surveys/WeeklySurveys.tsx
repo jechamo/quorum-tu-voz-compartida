@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2 } from "lucide-react";
+import { getCurrentWeekStart } from "@/lib/dateUtils";
 
 interface WeeklySurveysProps {
   module: 'politica' | 'futbol';
@@ -23,14 +24,6 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   useEffect(() => {
     loadWeeklyQuestions();
   }, [module, userId]);
-
-  const getCurrentWeekStart = () => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const monday = new Date(today.setDate(diff));
-    return monday.toISOString().split('T')[0];
-  };
 
   const loadWeeklyQuestions = async () => {
     const weekStart = getCurrentWeekStart();

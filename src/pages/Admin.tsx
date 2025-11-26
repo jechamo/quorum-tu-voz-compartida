@@ -11,6 +11,7 @@ import { PartiesManagement } from "@/components/admin/PartiesManagement";
 import { TeamsManagement } from "@/components/admin/TeamsManagement";
 import { QuestionsManagement } from "@/components/admin/QuestionsManagement";
 import { AdminsManagement } from "@/components/admin/AdminsManagement";
+import { SurveyStats } from "@/components/admin/SurveyStats";
 
 export default function Admin() {
   const { user, loading, isAdmin } = useAuth();
@@ -69,8 +70,9 @@ export default function Admin() {
           </h1>
 
           <Tabs defaultValue="questions" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
               <TabsTrigger value="questions">Encuestas</TabsTrigger>
+              <TabsTrigger value="stats">Estadísticas</TabsTrigger>
               <TabsTrigger value="parties">Partidos</TabsTrigger>
               <TabsTrigger value="teams">Equipos</TabsTrigger>
               <TabsTrigger value="admins">Administradores</TabsTrigger>
@@ -78,6 +80,10 @@ export default function Admin() {
 
             <TabsContent value="questions">
               <QuestionsManagement />
+            </TabsContent>
+
+            <TabsContent value="stats">
+              <SurveyStats />
             </TabsContent>
 
             <TabsContent value="parties">
