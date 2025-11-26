@@ -12,7 +12,7 @@ export default function Futbol() {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/');
+      navigate('/auth/futbol');
     }
   }, [user, loading, navigate]);
 

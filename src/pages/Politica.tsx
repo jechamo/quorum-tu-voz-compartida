@@ -12,7 +12,7 @@ export default function Politica() {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/');
+      navigate('/auth/politica');
     }
   }, [user, loading, navigate]);
 

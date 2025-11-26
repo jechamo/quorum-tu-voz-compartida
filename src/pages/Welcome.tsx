@@ -1,10 +1,19 @@
+import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/home');
+    }
+  }, [user, loading, navigate]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
