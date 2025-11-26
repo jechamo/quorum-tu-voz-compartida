@@ -91,12 +91,27 @@ export default function AuthModule() {
 
     setLoading(true);
     try {
-      await signIn(loginPhone, loginPassword);
+      const { user } = await signIn(loginPhone, loginPassword);
+      
+      // Check if user is admin
+      const { data: adminRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      
       toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión correctamente",
       });
-      navigate('/home');
+      
+      // Redirect based on role
+      if (adminRole) {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
     } catch (error: any) {
       toast({
         title: "Error al iniciar sesión",
