@@ -15,7 +15,7 @@ import { useInitializeAdmin } from "@/hooks/useInitializeAdmin";
 import { ArrowLeft } from "lucide-react";
 
 export default function AuthModule() {
-  const { module } = useParams<{ module: 'politica' | 'futbol' }>();
+  const { module } = useParams<{ module: "politica" | "futbol" }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -32,34 +32,44 @@ export default function AuthModule() {
   const [signupPhone, setSignupPhone] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [username, setUsername] = useState("");
-  const [gender, setGender] = useState<'masculino' | 'femenino' | 'otro'>('masculino');
+  const [gender, setGender] = useState<"masculino" | "femenino" | "otro">("masculino");
   const [age, setAge] = useState("");
   const [selectedParty, setSelectedParty] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
 
-  const isPolitica = module === 'politica';
-  const moduleColor = isPolitica ? 'primary' : 'secondary';
-  const moduleTitle = isPolitica ? 'Política' : 'La Liga';
+  const isPolitica = module === "politica";
+  const moduleColor = isPolitica ? "primary" : "secondary";
+  const moduleTitle = isPolitica ? "Política" : "La Liga";
   const moduleIcon = isPolitica ? (
     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+      />
     </svg>
   ) : (
     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+      />
     </svg>
   );
 
   useEffect(() => {
-    if (!module || (module !== 'politica' && module !== 'futbol')) {
-      navigate('/');
+    if (!module || (module !== "politica" && module !== "futbol")) {
+      navigate("/");
       return;
     }
   }, [module, navigate]);
 
   useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate("/");
     }
   }, [user, navigate]);
 
@@ -69,12 +79,12 @@ export default function AuthModule() {
   }, []);
 
   const loadParties = async () => {
-    const { data } = await supabase.from('parties').select('*').order('name');
+    const { data } = await supabase.from("parties").select("*").order("name");
     if (data) setParties(data);
   };
 
   const loadTeams = async () => {
-    const { data } = await supabase.from('teams').select('*').order('name');
+    const { data } = await supabase.from("teams").select("*").order("name");
     if (data) setTeams(data);
   };
 
@@ -92,25 +102,25 @@ export default function AuthModule() {
     setLoading(true);
     try {
       const { user } = await signIn(loginPhone, loginPassword);
-      
+
       // Check if user is admin
       const { data: adminRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
         .maybeSingle();
-      
+
       toast({
         title: "¡Bienvenido!",
         description: "Has iniciado sesión correctamente",
       });
-      
+
       // Redirect based on role
       if (adminRole) {
-        navigate('/admin');
+        navigate("/admin");
       } else {
-        navigate('/home');
+        navigate("/home");
       }
     } catch (error: any) {
       toast({
@@ -125,7 +135,7 @@ export default function AuthModule() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!signupPhone || !signupPassword || !username || !age) {
       toast({
         title: "Error",
@@ -162,12 +172,12 @@ export default function AuthModule() {
       }
 
       await signUp(signupData);
-      
+
       toast({
         title: "¡Cuenta creada!",
         description: "Tu cuenta ha sido creada correctamente",
       });
-      navigate('/home');
+      navigate("/home");
     } catch (error: any) {
       toast({
         title: "Error al registrarse",
@@ -182,26 +192,21 @@ export default function AuthModule() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-elevated bg-card">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/')}
-          className="mb-4 -ml-2"
-        >
+        <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="mb-4 -ml-2">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Volver
         </Button>
 
         <div className="flex flex-col items-center mb-6 space-y-4">
-          <div className={`w-16 h-16 rounded-2xl ${isPolitica ? 'bg-primary/10' : 'bg-secondary/10'} flex items-center justify-center ${isPolitica ? 'text-primary' : 'text-secondary'}`}>
+          <div
+            className={`w-16 h-16 rounded-2xl ${isPolitica ? "bg-primary/10" : "bg-secondary/10"} flex items-center justify-center ${isPolitica ? "text-primary" : "text-secondary"}`}
+          >
             {moduleIcon}
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-display font-bold text-foreground">
-              QUORUM {moduleTitle}
-            </h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">QUORUM {moduleTitle}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {isPolitica ? 'Encuestas de política española' : 'Encuestas de fútbol español'}
+              {isPolitica ? "Encuestas de política española" : "Encuestas de fútbol español"}
             </p>
           </div>
         </div>
@@ -219,7 +224,7 @@ export default function AuthModule() {
                 <Input
                   id="login-phone"
                   type="tel"
-                  placeholder="Ej: 679656914"
+                  placeholder="Ej: 678555555"
                   value={loginPhone}
                   onChange={(e) => setLoginPhone(e.target.value)}
                   disabled={loading}
@@ -235,9 +240,9 @@ export default function AuthModule() {
                   disabled={loading}
                 />
               </div>
-              <Button 
-                type="submit" 
-                className={`w-full ${isPolitica ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-secondary hover:bg-secondary/90 text-secondary-foreground'}`}
+              <Button
+                type="submit"
+                className={`w-full ${isPolitica ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"}`}
                 disabled={loading}
               >
                 {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
@@ -344,9 +349,9 @@ export default function AuthModule() {
                 </div>
               )}
 
-              <Button 
-                type="submit" 
-                className={`w-full ${isPolitica ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-secondary hover:bg-secondary/90 text-secondary-foreground'}`}
+              <Button
+                type="submit"
+                className={`w-full ${isPolitica ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"}`}
                 disabled={loading}
               >
                 {loading ? "Creando cuenta..." : "Crear Cuenta"}
