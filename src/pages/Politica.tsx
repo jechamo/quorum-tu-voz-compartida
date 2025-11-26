@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { WeeklySurveys } from "@/components/surveys/WeeklySurveys";
+import { WeeklyHistory } from "@/components/surveys/WeeklyHistory";
 
 export default function Politica() {
   const { user, loading } = useAuth();
@@ -51,22 +53,21 @@ export default function Politica() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <Card className="max-w-3xl mx-auto p-8 shadow-elevated bg-card">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center">
-              <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-display font-bold text-foreground">
-              QUORUM Política
-            </h1>
-            <p className="text-muted-foreground">
-              Encuestas sobre política española disponibles próximamente
-            </p>
-          </div>
-        </Card>
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <Tabs defaultValue="current" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="current">Esta Semana</TabsTrigger>
+            <TabsTrigger value="history">Historial</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="current">
+            <WeeklySurveys module="politica" userId={user.id} />
+          </TabsContent>
+
+          <TabsContent value="history">
+            <WeeklyHistory module="politica" />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
