@@ -64,6 +64,33 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_verifications: {
+        Row: {
+          code: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          phone: string
+          verified: boolean | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          phone: string
+          verified?: boolean | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          phone?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number
@@ -272,6 +299,24 @@ export type Database = {
       create_initial_admin: { Args: never; Returns: undefined }
       get_question_stats: {
         Args: { question_uuid: string }
+        Returns: {
+          option_id: string
+          option_order: number
+          option_text: string
+          percentage: number
+          total_votes: number
+          vote_count: number
+        }[]
+      }
+      get_question_stats_filtered: {
+        Args: {
+          filter_age_max?: number
+          filter_age_min?: number
+          filter_gender?: Database["public"]["Enums"]["user_gender"]
+          filter_party_id?: string
+          filter_team_id?: string
+          question_uuid: string
+        }
         Returns: {
           option_id: string
           option_order: number
