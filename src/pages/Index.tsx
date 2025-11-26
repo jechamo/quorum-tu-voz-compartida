@@ -13,8 +13,10 @@ const Index = () => {
   useEffect(() => {
     if (!loading && !user) {
       navigate('/');
+    } else if (!loading && user && isAdmin) {
+      navigate('/admin');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, isAdmin, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
