@@ -270,6 +270,17 @@ export type Database = {
     }
     Functions: {
       create_initial_admin: { Args: never; Returns: undefined }
+      get_question_stats: {
+        Args: { question_uuid: string }
+        Returns: {
+          option_id: string
+          option_order: number
+          option_text: string
+          percentage: number
+          total_votes: number
+          vote_count: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

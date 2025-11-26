@@ -61,27 +61,22 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   };
 
   const loadResults = async (questionId: string) => {
-    const { data: answersData } = await supabase
-      .from('user_answers')
-      .select('answer_option_id')
-      .eq('question_id', questionId);
+    const { data: statsData, error } = await supabase
+      .rpc('get_question_stats', { question_uuid: questionId });
 
-    const { data: optionsData } = await supabase
-      .from('answer_options')
-      .select('*')
-      .eq('question_id', questionId);
-
-    if (answersData && optionsData) {
-      const total = answersData.length;
-      const counts = optionsData.map(opt => ({
-        ...opt,
-        count: answersData.filter(a => a.answer_option_id === opt.id).length,
-        percentage: total > 0 ? Math.round((answersData.filter(a => a.answer_option_id === opt.id).length / total) * 100) : 0,
+    if (statsData && !error) {
+      const total = statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
+      const options = statsData.map(stat => ({
+        id: stat.option_id,
+        text: stat.option_text,
+        option_order: stat.option_order,
+        count: Number(stat.vote_count),
+        percentage: stat.percentage,
       }));
 
       setResults(prev => ({
         ...prev,
-        [questionId]: { options: counts, total },
+        [questionId]: { options, total },
       }));
     }
   };
