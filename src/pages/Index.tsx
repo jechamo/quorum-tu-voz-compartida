@@ -37,6 +37,11 @@ const Index = () => {
     return null;
   }
 
+  // Don't render if user is admin - let useEffect handle redirect
+  if (isAdmin) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-border bg-card shadow-card">

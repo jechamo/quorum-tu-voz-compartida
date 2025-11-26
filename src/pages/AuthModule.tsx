@@ -245,7 +245,7 @@ export default function AuthModule() {
               </div>
               <Button
                 type="submit"
-                className={`w-full ${isGeneral ? "bg-accent hover:bg-accent/90" : isPolitica ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"}`}
+                className="w-full bg-gradient-to-r from-[#F4C430] to-[#2D6A4F] text-white hover:opacity-90 transition-opacity"
                 disabled={loading}
               >
                 {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
@@ -354,7 +354,7 @@ export default function AuthModule() {
 
               <Button
                 type="submit"
-                className={`w-full ${isGeneral ? "bg-accent hover:bg-accent/90" : isPolitica ? "bg-primary hover:bg-primary/90 text-primary-foreground" : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"}`}
+                className="w-full bg-gradient-to-r from-[#F4C430] to-[#2D6A4F] text-white hover:opacity-90 transition-opacity"
                 disabled={loading}
               >
                 {loading ? "Creando cuenta..." : "Crear Cuenta"}
