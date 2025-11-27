@@ -28,13 +28,8 @@ export default function AuthModule() {
   const [loginPhone, setLoginPhone] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
-  // Signup form - Step 1: Phone verification
-  const [signupStep, setSignupStep] = useState<1 | 2 | 3>(1);
+  // Signup form
   const [signupPhone, setSignupPhone] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [phoneVerified, setPhoneVerified] = useState(false);
-
-  // Signup form - Step 2: User data
   const [signupPassword, setSignupPassword] = useState("");
   const [username, setUsername] = useState("");
   const [gender, setGender] = useState<"masculino" | "femenino" | "otro">("masculino");
@@ -132,100 +127,10 @@ export default function AuthModule() {
     }
   };
 
-  const handleSendVerification = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!signupPhone) {
-      toast({
-        title: "Error",
-        description: "Por favor ingresa un número de teléfono",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('send-phone-verification', {
-        body: { phone: signupPhone }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast({
-          title: "Código enviado",
-          description: "Hemos enviado un código de verificación a tu teléfono",
-        });
-        setSignupStep(2);
-      } else {
-        throw new Error("No se pudo enviar el código");
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error al enviar código",
-        description: error.message || "Intenta nuevamente",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!verificationCode) {
-      toast({
-        title: "Error",
-        description: "Por favor ingresa el código de verificación",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-phone-code', {
-        body: { phone: signupPhone, code: verificationCode }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        setPhoneVerified(true);
-        toast({
-          title: "Teléfono verificado",
-          description: "Ahora completa tu registro",
-        });
-        setSignupStep(3);
-      } else {
-        throw new Error("Código incorrecto");
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error al verificar código",
-        description: error.message || "Código incorrecto, intenta nuevamente",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phoneVerified) {
-      toast({
-        title: "Error",
-        description: "Debes verificar tu teléfono primero",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!signupPassword || !username || !age) {
+    if (!signupPhone || !signupPassword || !username || !age) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos obligatorios",
@@ -349,165 +254,112 @@ export default function AuthModule() {
           </TabsContent>
 
           <TabsContent value="signup">
-            {signupStep === 1 && (
-              <form onSubmit={handleSendVerification} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-phone">Teléfono *</Label>
-                  <Input
-                    id="signup-phone"
-                    type="tel"
-                    placeholder="Ej: +34679656914"
-                    value={signupPhone}
-                    onChange={(e) => setSignupPhone(e.target.value)}
-                    disabled={loading}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Incluye el código de país (ej: +34 para España)
-                  </p>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-[#F4C430] to-[#2D6A4F] text-white hover:opacity-90 transition-opacity"
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-phone">Teléfono *</Label>
+                <Input
+                  id="signup-phone"
+                  type="tel"
+                  placeholder="Ej: 679656914"
+                  value={signupPhone}
+                  onChange={(e) => setSignupPhone(e.target.value)}
                   disabled={loading}
-                >
-                  {loading ? "Enviando código..." : "Enviar código de verificación"}
-                </Button>
-              </form>
-            )}
-
-            {signupStep === 2 && (
-              <form onSubmit={handleVerifyCode} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="verification-code">Código de verificación *</Label>
-                  <Input
-                    id="verification-code"
-                    type="text"
-                    placeholder="Ej: 123456"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value)}
-                    disabled={loading}
-                    maxLength={6}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Ingresa el código de 6 dígitos enviado a {signupPhone}
-                  </p>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-[#F4C430] to-[#2D6A4F] text-white hover:opacity-90 transition-opacity"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="username">Nombre de usuario *</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Tu nombre de usuario"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   disabled={loading}
-                >
-                  {loading ? "Verificando..." : "Verificar código"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setSignupStep(1)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-password">Contraseña *</Label>
+                <Input
+                  id="signup-password"
+                  type="password"
+                  value={signupPassword}
+                  onChange={(e) => setSignupPassword(e.target.value)}
                   disabled={loading}
-                >
-                  Cambiar número de teléfono
-                </Button>
-              </form>
-            )}
-
-            {signupStep === 3 && (
-              <form onSubmit={handleSignup} className="space-y-4">
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Nombre de usuario *</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Tu nombre de usuario"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    disabled={loading}
-                  />
+                  <Label htmlFor="gender">Sexo *</Label>
+                  <Select value={gender} onValueChange={(v: any) => setGender(v)} disabled={loading}>
+                    <SelectTrigger id="gender">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="masculino">Masculino</SelectItem>
+                      <SelectItem value="femenino">Femenino</SelectItem>
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Contraseña *</Label>
+                  <Label htmlFor="age">Edad *</Label>
                   <Input
-                    id="signup-password"
-                    type="password"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
+                    id="age"
+                    type="number"
+                    placeholder="18"
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
                     disabled={loading}
+                    min="13"
+                    max="120"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">Sexo *</Label>
-                    <Select value={gender} onValueChange={(v: any) => setGender(v)} disabled={loading}>
-                      <SelectTrigger id="gender">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="masculino">Masculino</SelectItem>
-                        <SelectItem value="femenino">Femenino</SelectItem>
-                        <SelectItem value="otro">Otro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="age">Edad *</Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      placeholder="18"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      disabled={loading}
-                      min="13"
-                      max="120"
-                    />
-                  </div>
+              </div>
+
+              {(isPolitica || isGeneral) && (
+                <div className="space-y-2">
+                  <Label htmlFor="party">Partido político (opcional)</Label>
+                  <Select value={selectedParty} onValueChange={setSelectedParty} disabled={loading}>
+                    <SelectTrigger id="party">
+                      <SelectValue placeholder="Selecciona un partido" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parties.map((party) => (
+                        <SelectItem key={party.id} value={party.id}>
+                          {party.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              )}
 
-                {(isPolitica || isGeneral) && (
-                  <div className="space-y-2">
-                    <Label htmlFor="party">Partido político (opcional)</Label>
-                    <Select value={selectedParty} onValueChange={setSelectedParty} disabled={loading}>
-                      <SelectTrigger id="party">
-                        <SelectValue placeholder="Selecciona un partido" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {parties.map((party) => (
-                          <SelectItem key={party.id} value={party.id}>
-                            {party.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+              {(!isPolitica || isGeneral) && (
+                <div className="space-y-2">
+                  <Label htmlFor="team">Equipo (opcional)</Label>
+                  <Select value={selectedTeam} onValueChange={setSelectedTeam} disabled={loading}>
+                    <SelectTrigger id="team">
+                      <SelectValue placeholder="Selecciona un equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-                {(!isPolitica || isGeneral) && (
-                  <div className="space-y-2">
-                    <Label htmlFor="team">Equipo (opcional)</Label>
-                    <Select value={selectedTeam} onValueChange={setSelectedTeam} disabled={loading}>
-                      <SelectTrigger id="team">
-                        <SelectValue placeholder="Selecciona un equipo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem key={team.id} value={team.id}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-[#F4C430] to-[#2D6A4F] text-white hover:opacity-90 transition-opacity"
-                  disabled={loading}
-                >
-                  {loading ? "Creando cuenta..." : "Crear Cuenta"}
-                </Button>
-              </form>
-            )}
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-[#F4C430] to-[#2D6A4F] text-white hover:opacity-90 transition-opacity"
+                disabled={loading}
+              >
+                {loading ? "Creando cuenta..." : "Crear Cuenta"}
+              </Button>
+            </form>
           </TabsContent>
         </Tabs>
       </Card>
