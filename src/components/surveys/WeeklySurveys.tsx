@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2 } from "lucide-react";
 import { getCurrentWeekStart } from "@/lib/dateUtils";
 import { StatsFilters, FilterState } from "./StatsFilters";
+import { QuestionComments } from "./QuestionComments";
 
 interface WeeklySurveysProps {
   module: 'politica' | 'futbol';
@@ -241,6 +242,8 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
                 </div>
               )}
             </div>
+
+            <QuestionComments questionId={question.id} />
           </Card>
         );
       })}
