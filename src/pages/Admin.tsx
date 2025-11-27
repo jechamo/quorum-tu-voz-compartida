@@ -12,6 +12,7 @@ import { TeamsManagement } from "@/components/admin/TeamsManagement";
 import { QuestionsManagement } from "@/components/admin/QuestionsManagement";
 import { AdminsManagement } from "@/components/admin/AdminsManagement";
 import { SurveyStats } from "@/components/admin/SurveyStats";
+import { CommentsManagement } from "@/components/admin/CommentsManagement";
 
 export default function Admin() {
   const { user, loading, isAdmin } = useAuth();
@@ -26,8 +27,13 @@ export default function Admin() {
   }, [user, loading, isAdmin, navigate]);
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      await signOut();
+      // Navigation will be handled by the AuthContext's onAuthStateChange
+    } catch (error) {
+      console.error('Error signing out:', error);
+      navigate('/');
+    }
   };
 
   if (loading) {
@@ -70,12 +76,13 @@ export default function Admin() {
           </h1>
 
           <Tabs defaultValue="questions" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-6">
+            <TabsList className="grid w-full grid-cols-6 mb-6">
               <TabsTrigger value="questions">Encuestas</TabsTrigger>
               <TabsTrigger value="stats">Estadísticas</TabsTrigger>
+              <TabsTrigger value="comments">Comentarios</TabsTrigger>
               <TabsTrigger value="parties">Partidos</TabsTrigger>
               <TabsTrigger value="teams">Equipos</TabsTrigger>
-              <TabsTrigger value="admins">Administradores</TabsTrigger>
+              <TabsTrigger value="admins">Admins</TabsTrigger>
             </TabsList>
 
             <TabsContent value="questions">
@@ -84,6 +91,10 @@ export default function Admin() {
 
             <TabsContent value="stats">
               <SurveyStats />
+            </TabsContent>
+
+            <TabsContent value="comments">
+              <CommentsManagement />
             </TabsContent>
 
             <TabsContent value="parties">

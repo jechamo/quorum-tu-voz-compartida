@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { StatsFilters, FilterState } from "./StatsFilters";
 import { useToast } from "@/hooks/use-toast";
+import { QuestionComments } from "./QuestionComments";
 
 interface WeeklyHistoryProps {
   module: 'politica' | 'futbol';
@@ -273,13 +274,15 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
                               className={`h-full transition-all ${module === 'politica' ? 'bg-primary' : 'bg-secondary'}`}
                               style={{ width: `${option.percentage}%` }}
                             />
-                          </div>
-                        </div>
-                      ))}
+                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </Card>
+              )}
+            </div>
+
+            <QuestionComments questionId={question.id} />
+          </Card>
             );
           })}
         </div>
