@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,7 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
     ageMin: null,
     ageMax: null,
   });
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     if (module === 'politica') {
@@ -47,8 +48,13 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
   }, [module]);
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     onFiltersChange(filters);
-  }, [filters, onFiltersChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   const loadParties = async () => {
     const { data } = await supabase
