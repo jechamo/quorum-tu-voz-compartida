@@ -33,53 +33,86 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    let initialLoadDone = false;
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!mounted || initialLoadDone) return;
+        initialLoadDone = true;
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
+        }
         
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Check admin status synchronously
         if (session?.user) {
-          const adminStatus = await checkIsAdmin(session.user.id);
-          if (mounted) {
-            setIsAdmin(adminStatus);
+          try {
+            const adminStatus = await checkIsAdmin(session.user.id);
+            if (mounted) {
+              setIsAdmin(adminStatus);
+            }
+          } catch (e) {
+            console.error('Error checking admin status:', e);
           }
-        } else {
-          setIsAdmin(false);
         }
         
         if (mounted) {
           setLoading(false);
         }
+      } catch (e) {
+        console.error('Auth initialization error:', e);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state listener for subsequent changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        
+        // Skip INITIAL_SESSION as we handle it in initializeAuth
+        if (event === 'INITIAL_SESSION') return;
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          try {
+            const adminStatus = await checkIsAdmin(session.user.id);
+            if (mounted) {
+              setIsAdmin(adminStatus);
+            }
+          } catch (e) {
+            console.error('Error checking admin status:', e);
+          }
+        } else {
+          setIsAdmin(false);
+        }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return;
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const adminStatus = await checkIsAdmin(session.user.id);
-        if (mounted) {
-          setIsAdmin(adminStatus);
-        }
-      }
-      
-      if (mounted) {
+    initializeAuth();
+
+    // Fallback timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('Auth loading timeout - forcing load complete');
         setLoading(false);
       }
-    });
+    }, 5000);
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(timeout);
     };
   }, []);
 
