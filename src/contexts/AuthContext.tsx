@@ -33,86 +33,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
-    let initialLoadDone = false;
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (!mounted || initialLoadDone) return;
-        initialLoadDone = true;
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          setLoading(false);
-          return;
-        }
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          try {
-            const adminStatus = await checkIsAdmin(session.user.id);
-            if (mounted) {
-              setIsAdmin(adminStatus);
-            }
-          } catch (e) {
-            console.error('Error checking admin status:', e);
-          }
-        }
-        
-        if (mounted) {
-          setLoading(false);
-        }
-      } catch (e) {
-        console.error('Auth initialization error:', e);
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    // Set up auth state listener for subsequent changes
+    // Set up auth state listener FIRST - handles INITIAL_SESSION on refresh
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (!mounted) return;
         
-        // Skip INITIAL_SESSION as we handle it in initializeAuth
-        if (event === 'INITIAL_SESSION') return;
+        console.log('Auth event:', event, session?.user?.email);
         
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          try {
-            const adminStatus = await checkIsAdmin(session.user.id);
-            if (mounted) {
-              setIsAdmin(adminStatus);
+          // Defer admin check to avoid Supabase deadlock
+          setTimeout(async () => {
+            if (!mounted) return;
+            try {
+              const adminStatus = await checkIsAdmin(session.user.id);
+              if (mounted) {
+                setIsAdmin(adminStatus);
+              }
+            } catch (e) {
+              console.error('Error checking admin status:', e);
             }
-          } catch (e) {
-            console.error('Error checking admin status:', e);
-          }
+          }, 0);
         } else {
           setIsAdmin(false);
+        }
+        
+        // Set loading false after INITIAL_SESSION (page refresh/load)
+        if (event === 'INITIAL_SESSION') {
+          setLoading(false);
         }
       }
     );
 
-    initializeAuth();
-
-    // Fallback timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn('Auth loading timeout - forcing load complete');
-        setLoading(false);
-      }
-    }, 5000);
-
     return () => {
       mounted = false;
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, []);
 
