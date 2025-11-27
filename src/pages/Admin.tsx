@@ -76,14 +76,16 @@ export default function Admin() {
           </h1>
 
           <Tabs defaultValue="questions" className="w-full">
-            <TabsList className="grid w-full grid-cols-6 mb-6">
-              <TabsTrigger value="questions">Encuestas</TabsTrigger>
-              <TabsTrigger value="stats">Estadísticas</TabsTrigger>
-              <TabsTrigger value="comments">Comentarios</TabsTrigger>
-              <TabsTrigger value="parties">Partidos</TabsTrigger>
-              <TabsTrigger value="teams">Equipos</TabsTrigger>
-              <TabsTrigger value="admins">Admins</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-2 px-2 mb-6">
+              <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground min-w-max w-full md:grid md:grid-cols-6">
+                <TabsTrigger value="questions" className="whitespace-nowrap">Encuestas</TabsTrigger>
+                <TabsTrigger value="stats" className="whitespace-nowrap">Estadísticas</TabsTrigger>
+                <TabsTrigger value="comments" className="whitespace-nowrap">Comentarios</TabsTrigger>
+                <TabsTrigger value="parties" className="whitespace-nowrap">Partidos</TabsTrigger>
+                <TabsTrigger value="teams" className="whitespace-nowrap">Equipos</TabsTrigger>
+                <TabsTrigger value="admins" className="whitespace-nowrap">Admins</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="questions">
               <QuestionsManagement />
