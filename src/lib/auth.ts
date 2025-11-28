@@ -39,9 +39,7 @@ export const signUp = async (data: SignUpData) => {
     age: data.age,
     party_id: data.partyId || null,
     team_id: data.teamId || null,
-    // @ts-ignore - Ignoramos error de tipado si las columnas no están regeneradas en types.ts
     accepted_terms: data.acceptedTerms,
-    // @ts-ignore
     accepted_terms_at: new Date().toISOString(),
   });
 
