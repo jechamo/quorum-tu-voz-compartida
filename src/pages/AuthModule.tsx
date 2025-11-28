@@ -4,9 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox"; // <--- Importante
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Logo } from "@/components/Logo";
 import { signIn, signUp, SignUpData } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,10 +36,10 @@ export default function AuthModule() {
   const [age, setAge] = useState("");
   const [selectedParty, setSelectedParty] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false); // <--- Estado para el checkbox
 
   const isPolitica = module === "politica";
   const isGeneral = !module;
-  const moduleColor = isPolitica ? "primary" : "secondary";
   const moduleTitle = isPolitica ? "Política" : isGeneral ? "" : "La Liga";
   const moduleIcon = isGeneral ? null : isPolitica ? (
     <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,7 +97,6 @@ export default function AuthModule() {
     try {
       const { user } = await signIn(loginPhone, loginPassword);
 
-      // Check if user is admin
       const { data: adminRole } = await supabase
         .from("user_roles")
         .select("role")
@@ -110,7 +109,6 @@ export default function AuthModule() {
         description: "Has iniciado sesión correctamente",
       });
 
-      // Redirect based on role
       if (adminRole) {
         navigate("/admin");
       } else {
@@ -139,6 +137,16 @@ export default function AuthModule() {
       return;
     }
 
+    // Validación del Checkbox
+    if (!acceptedTerms) {
+      toast({
+        title: "Error",
+        description: "Debes aceptar la Política de Privacidad para continuar",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const ageNum = parseInt(age);
     if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
       toast({
@@ -157,6 +165,7 @@ export default function AuthModule() {
         username,
         gender,
         age: ageNum,
+        acceptedTerms, // <--- Aquí se envía el dato que faltaba y arregla el error
       };
 
       if (selectedParty) {
@@ -201,14 +210,12 @@ export default function AuthModule() {
             </div>
           )}
           <div className="text-center">
-            <h1 className="text-2xl font-display font-bold text-foreground">
-              QUORUM {moduleTitle}
-            </h1>
+            <h1 className="text-2xl font-display font-bold text-foreground">QUORUM {moduleTitle}</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {isGeneral 
-                ? "Inicia sesión o crea tu cuenta" 
-                : isPolitica 
-                  ? "Encuestas de política española" 
+              {isGeneral
+                ? "Inicia sesión o crea tu cuenta"
+                : isPolitica
+                  ? "Encuestas de política española"
                   : "Encuestas de fútbol español"}
             </p>
           </div>
@@ -351,6 +358,24 @@ export default function AuthModule() {
                   </Select>
                 </div>
               )}
+
+              {/* CHECKBOX DE CONSENTIMIENTO */}
+              <div className="flex items-start space-x-2 mt-4 mb-2">
+                <Checkbox
+                  id="terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <label
+                    htmlFor="terms"
+                    className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-muted-foreground text-left"
+                  >
+                    He leído y acepto la política de privacidad y consiento el tratamiento de mis datos personales
+                    (incluyendo ideología política) para fines estadísticos.
+                  </label>
+                </div>
+              </div>
 
               <Button
                 type="submit"
