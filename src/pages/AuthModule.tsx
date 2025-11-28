@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox"; // <--- Importante
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { signIn, signUp, SignUpData } from "@/lib/auth";
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInitializeAdmin } from "@/hooks/useInitializeAdmin";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff } from "lucide-react"; // Importar iconos
 
 export default function AuthModule() {
   const { module } = useParams<{ module?: "politica" | "futbol" }>();
@@ -31,12 +31,16 @@ export default function AuthModule() {
   // Signup form
   const [signupPhone, setSignupPhone] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState(""); // Nuevo estado
   const [username, setUsername] = useState("");
   const [gender, setGender] = useState<"masculino" | "femenino" | "otro">("masculino");
   const [age, setAge] = useState("");
   const [selectedParty, setSelectedParty] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
-  const [acceptedTerms, setAcceptedTerms] = useState(false); // <--- Estado para el checkbox
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  // Estado para visibilidad de contraseña
+  const [showPassword, setShowPassword] = useState(false);
 
   const isPolitica = module === "politica";
   const isGeneral = !module;
@@ -128,7 +132,7 @@ export default function AuthModule() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!signupPhone || !signupPassword || !username || !age) {
+    if (!signupPhone || !signupPassword || !signupConfirmPassword || !username || !age) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos obligatorios",
@@ -137,7 +141,16 @@ export default function AuthModule() {
       return;
     }
 
-    // Validación del Checkbox
+    // Validación de contraseñas iguales
+    if (signupPassword !== signupConfirmPassword) {
+      toast({
+        title: "Error",
+        description: "Las contraseñas no coinciden",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!acceptedTerms) {
       toast({
         title: "Error",
@@ -165,7 +178,7 @@ export default function AuthModule() {
         username,
         gender,
         age: ageNum,
-        acceptedTerms, // <--- Aquí se envía el dato que faltaba y arregla el error
+        acceptedTerms,
       };
 
       if (selectedParty) {
@@ -242,13 +255,28 @@ export default function AuthModule() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="login-password">Contraseña</Label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <Button
                 type="submit"
@@ -284,16 +312,54 @@ export default function AuthModule() {
                   disabled={loading}
                 />
               </div>
+
+              {/* Contraseña Original */}
               <div className="space-y-2">
                 <Label htmlFor="signup-password">Contraseña *</Label>
-                <Input
-                  id="signup-password"
-                  type="password"
-                  value={signupPassword}
-                  onChange={(e) => setSignupPassword(e.target.value)}
-                  disabled={loading}
-                />
+                <div className="relative">
+                  <Input
+                    id="signup-password"
+                    type={showPassword ? "text" : "password"}
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    disabled={loading}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
               </div>
+
+              {/* Confirmar Contraseña */}
+              <div className="space-y-2">
+                <Label htmlFor="signup-confirm-password">Confirmar Contraseña *</Label>
+                <div className="relative">
+                  <Input
+                    id="signup-confirm-password"
+                    type={showPassword ? "text" : "password"}
+                    value={signupConfirmPassword}
+                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                    disabled={loading}
+                    className={
+                      signupConfirmPassword && signupPassword !== signupConfirmPassword ? "border-destructive" : ""
+                    }
+                  />
+                </div>
+                {signupConfirmPassword && signupPassword !== signupConfirmPassword && (
+                  <p className="text-xs text-destructive mt-1">Las contraseñas no coinciden</p>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="gender">Sexo *</Label>
@@ -359,7 +425,6 @@ export default function AuthModule() {
                 </div>
               )}
 
-              {/* CHECKBOX DE CONSENTIMIENTO */}
               <div className="flex items-start space-x-2 mt-4 mb-2">
                 <Checkbox
                   id="terms"
