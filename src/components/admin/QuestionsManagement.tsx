@@ -7,8 +7,14 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, CalendarIcon } from "lucide-react"; // Añadido CalendarIcon
 import { getCurrentWeekStart } from "@/lib/dateUtils";
+// Nuevas importaciones para el calendario
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { es } from "date-fns/locale"; // Para que salga en español
+import { cn } from "@/lib/utils";
 
 export const QuestionsManagement = () => {
   const [questions, setQuestions] = useState<any[]>([]);
@@ -19,11 +25,12 @@ export const QuestionsManagement = () => {
 
   // Form state
   const [questionText, setQuestionText] = useState("");
-  const [module, setModule] = useState<'politica' | 'futbol'>('politica');
-  const [scope, setScope] = useState<'general' | 'specific'>('general');
+  const [module, setModule] = useState<"politica" | "futbol">("politica");
+  const [scope, setScope] = useState<"general" | "specific">("general");
   const [selectedParty, setSelectedParty] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
-  const [weekStartDate, setWeekStartDate] = useState(getCurrentWeekStart());
+  // Estado modificado para manejar objeto Date
+  const [weekStartDate, setWeekStartDate] = useState<Date | undefined>(new Date(getCurrentWeekStart()));
   const [isMandatory, setIsMandatory] = useState(false);
   const [options, setOptions] = useState<string[]>(["", ""]);
 
@@ -35,19 +42,19 @@ export const QuestionsManagement = () => {
 
   const loadQuestions = async () => {
     const { data } = await supabase
-      .from('questions')
-      .select('*, parties(name), teams(name), answer_options(*)')
-      .order('week_start_date', { ascending: false });
+      .from("questions")
+      .select("*, parties(name), teams(name), answer_options(*)")
+      .order("week_start_date", { ascending: false });
     if (data) setQuestions(data);
   };
 
   const loadParties = async () => {
-    const { data } = await supabase.from('parties').select('*').order('name');
+    const { data } = await supabase.from("parties").select("*").order("name");
     if (data) setParties(data);
   };
 
   const loadTeams = async () => {
-    const { data } = await supabase.from('teams').select('*').order('name');
+    const { data } = await supabase.from("teams").select("*").order("name");
     if (data) setTeams(data);
   };
 
@@ -73,6 +80,16 @@ export const QuestionsManagement = () => {
     setOptions(newOptions);
   };
 
+  // Función auxiliar para ajustar al lunes
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    const dayOfWeek = date.getDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(date);
+    monday.setDate(date.getDate() + diff);
+    setWeekStartDate(monday);
+  };
+
   const handleSubmit = async () => {
     if (!questionText.trim()) {
       toast({
@@ -83,7 +100,16 @@ export const QuestionsManagement = () => {
       return;
     }
 
-    const filledOptions = options.filter(o => o.trim());
+    if (!weekStartDate) {
+      toast({
+        title: "Error",
+        description: "Selecciona una fecha",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const filledOptions = options.filter((o) => o.trim());
     if (filledOptions.length < 2) {
       toast({
         title: "Error",
@@ -93,8 +119,8 @@ export const QuestionsManagement = () => {
       return;
     }
 
-    if (scope === 'specific') {
-      if (module === 'politica' && !selectedParty) {
+    if (scope === "specific") {
+      if (module === "politica" && !selectedParty) {
         toast({
           title: "Error",
           description: "Selecciona un partido para pregunta específica",
@@ -102,7 +128,7 @@ export const QuestionsManagement = () => {
         });
         return;
       }
-      if (module === 'futbol' && !selectedTeam) {
+      if (module === "futbol" && !selectedTeam) {
         toast({
           title: "Error",
           description: "Selecciona un equipo para pregunta específica",
@@ -114,27 +140,26 @@ export const QuestionsManagement = () => {
 
     setLoading(true);
     try {
+      // Ajustar zona horaria para enviar la fecha correcta (YYYY-MM-DD)
+      const formattedDate = format(weekStartDate, "yyyy-MM-dd");
+
       const questionData: any = {
         text: questionText.trim(),
         module,
         scope,
-        week_start_date: weekStartDate,
+        week_start_date: formattedDate,
         is_mandatory: isMandatory,
       };
 
-      if (scope === 'specific') {
-        if (module === 'politica') {
+      if (scope === "specific") {
+        if (module === "politica") {
           questionData.party_id = selectedParty;
         } else {
           questionData.team_id = selectedTeam;
         }
       }
 
-      const { data: question, error: qError } = await supabase
-        .from('questions')
-        .insert(questionData)
-        .select()
-        .single();
+      const { data: question, error: qError } = await supabase.from("questions").insert(questionData).select().single();
 
       if (qError) throw qError;
 
@@ -144,7 +169,7 @@ export const QuestionsManagement = () => {
         option_order: index,
       }));
 
-      const { error: oError } = await supabase.from('answer_options').insert(answerOptions);
+      const { error: oError } = await supabase.from("answer_options").insert(answerOptions);
       if (oError) throw oError;
 
       toast({
@@ -154,7 +179,7 @@ export const QuestionsManagement = () => {
 
       // Reset form
       setQuestionText("");
-      setScope('general');
+      setScope("general");
       setSelectedParty("");
       setSelectedTeam("");
       setIsMandatory(false);
@@ -176,7 +201,7 @@ export const QuestionsManagement = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('questions').delete().eq('id', id);
+      const { error } = await supabase.from("questions").delete().eq("id", id);
       if (error) throw error;
 
       toast({
@@ -199,7 +224,7 @@ export const QuestionsManagement = () => {
     <div className="space-y-6">
       <Card className="p-6 bg-card">
         <h3 className="font-display font-semibold text-lg mb-4">Crear Nueva Pregunta</h3>
-        
+
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -215,27 +240,38 @@ export const QuestionsManagement = () => {
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="week">Lunes de la semana</Label>
-              <Input
-                id="week"
-                type="date"
-                value={weekStartDate}
-                onChange={(e) => {
-                  const selectedDate = new Date(e.target.value + 'T00:00:00');
-                  const dayOfWeek = selectedDate.getDay();
-                  // Calculate days to subtract to get to Monday (day 1)
-                  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-                  const monday = new Date(selectedDate);
-                  monday.setDate(selectedDate.getDate() + diff);
-                  setWeekStartDate(monday.toISOString().split('T')[0]);
-                }}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
+            <div className="flex flex-col gap-2">
+              <Label>Lunes de la semana</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !weekStartDate && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {weekStartDate ? format(weekStartDate, "PPP", { locale: es }) : <span>Selecciona fecha</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={weekStartDate}
+                    onSelect={handleDateSelect}
+                    initialFocus
+                    locale={es}
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
                 Se ajustará automáticamente al lunes de la semana seleccionada
               </p>
             </div>
           </div>
+
+          {/* ... El resto del formulario sigue igual ... */}
 
           <div>
             <Label htmlFor="question">Pregunta</Label>
@@ -261,7 +297,7 @@ export const QuestionsManagement = () => {
               </Select>
             </div>
 
-            {scope === 'specific' && module === 'politica' && (
+            {scope === "specific" && module === "politica" && (
               <div>
                 <Label htmlFor="party">Partido</Label>
                 <Select value={selectedParty} onValueChange={setSelectedParty}>
@@ -270,14 +306,16 @@ export const QuestionsManagement = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {parties.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
 
-            {scope === 'specific' && module === 'futbol' && (
+            {scope === "specific" && module === "futbol" && (
               <div>
                 <Label htmlFor="team">Equipo</Label>
                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
@@ -286,7 +324,9 @@ export const QuestionsManagement = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {teams.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -345,8 +385,10 @@ export const QuestionsManagement = () => {
             <div className="flex justify-between items-start mb-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${q.module === 'politica' ? 'bg-primary/20 text-primary' : 'bg-secondary/20 text-secondary'}`}>
-                    {q.module === 'politica' ? 'Política' : 'La Liga'}
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${q.module === "politica" ? "bg-primary/20 text-primary" : "bg-secondary/20 text-secondary"}`}
+                  >
+                    {q.module === "politica" ? "Política" : "La Liga"}
                   </span>
                   {q.is_mandatory && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground">
@@ -358,7 +400,7 @@ export const QuestionsManagement = () => {
                   </span>
                 </div>
                 <p className="font-medium text-foreground">{q.text}</p>
-                {q.scope === 'specific' && (
+                {q.scope === "specific" && (
                   <p className="text-sm text-muted-foreground">
                     {q.parties ? `Partido: ${q.parties.name}` : `Equipo: ${q.teams.name}`}
                   </p>
