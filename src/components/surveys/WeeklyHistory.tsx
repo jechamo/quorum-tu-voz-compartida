@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { QuestionComments } from "./QuestionComments";
 
 interface WeeklyHistoryProps {
-  module: 'politica' | 'futbol';
+  module: "politica" | "futbol";
   userId: string;
 }
 
@@ -42,14 +42,14 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   const loadWeeks = async () => {
     // Get last 4 weeks
     const { data } = await supabase
-      .from('questions')
-      .select('week_start_date')
-      .eq('module', module)
-      .order('week_start_date', { ascending: false })
+      .from("questions")
+      .select("week_start_date")
+      .eq("module", module)
+      .order("week_start_date", { ascending: false })
       .limit(4);
 
     if (data) {
-      const uniqueWeeks = Array.from(new Set(data.map(d => d.week_start_date)));
+      const uniqueWeeks = Array.from(new Set(data.map((d) => d.week_start_date)));
       setWeeks(uniqueWeeks);
       if (uniqueWeeks.length > 0) {
         setSelectedWeek(uniqueWeeks[0]);
@@ -59,55 +59,58 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
   const loadWeekData = async (weekStart: string) => {
     const { data: questions } = await supabase
-      .from('questions')
-      .select('*, answer_options(*), parties(name), teams(name)')
-      .eq('module', module)
-      .eq('week_start_date', weekStart);
+      .from("questions")
+      .select("*, answer_options(*), parties(name), teams(name)")
+      .eq("module", module)
+      .eq("week_start_date", weekStart);
 
     if (questions) {
       // Load user's answers for this week
       const { data: existingAnswers } = await supabase
-        .from('user_answers')
-        .select('question_id, answer_option_id')
-        .eq('user_id', userId)
-        .in('question_id', questions.map(q => q.id));
+        .from("user_answers")
+        .select("question_id, answer_option_id")
+        .eq("user_id", userId)
+        .in(
+          "question_id",
+          questions.map((q) => q.id),
+        );
 
       const answersMap: { [key: string]: string } = {};
-      existingAnswers?.forEach(answer => {
+      existingAnswers?.forEach((answer) => {
         answersMap[answer.question_id] = answer.answer_option_id;
       });
       setUserAnswers(answersMap);
 
       const questionsWithResults = await Promise.all(
         questions.map(async (question) => {
-          const { data: statsData } = await supabase
-            .rpc('get_question_stats_filtered', {
-              question_uuid: question.id,
-              filter_party_id: filters.partyId,
-              filter_team_id: filters.teamId,
-              filter_gender: filters.gender as any,
-              filter_age_min: filters.ageMin,
-              filter_age_max: filters.ageMax,
-            });
+          const { data: statsData } = await supabase.rpc("get_question_stats_filtered", {
+            question_uuid: question.id,
+            filter_party_id: filters.partyId,
+            filter_team_id: filters.teamId,
+            filter_gender: filters.gender as any,
+            filter_age_min: filters.ageMin,
+            filter_age_max: filters.ageMax,
+          });
 
           const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
-          const options = statsData?.map(stat => ({
-            id: stat.option_id,
-            text: stat.option_text,
-            option_order: stat.option_order,
-            count: Number(stat.vote_count),
-            percentage: stat.percentage,
-          })) || [];
+          const options =
+            statsData?.map((stat) => ({
+              id: stat.option_id,
+              text: stat.option_text,
+              option_order: stat.option_order,
+              count: Number(stat.vote_count),
+              percentage: stat.percentage,
+            })) || [];
 
           return { ...question, results: { options, total } };
-        })
+        }),
       );
 
       setWeekData(questionsWithResults);
     }
   };
 
-  const getWeekIndex = () => weeks.indexOf(selectedWeek || '');
+  const getWeekIndex = () => weeks.indexOf(selectedWeek || "");
 
   const goToPrevWeek = () => {
     const index = getWeekIndex();
@@ -125,7 +128,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
   const formatWeekDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+    return date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
   };
 
   const handleAnswer = async (questionId: string) => {
@@ -140,7 +143,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
     }
 
     try {
-      const { error } = await supabase.from('user_answers').insert({
+      const { error } = await supabase.from("user_answers").insert({
         user_id: userId,
         question_id: questionId,
         answer_option_id: answerId,
@@ -178,27 +181,15 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-display font-bold text-foreground">
-          Historial de Encuestas
-        </h2>
+        <h2 className="text-2xl font-display font-bold text-foreground">Historial de Encuestas</h2>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToPrevWeek}
-            disabled={getWeekIndex() === weeks.length - 1}
-          >
+          <Button variant="outline" size="sm" onClick={goToPrevWeek} disabled={getWeekIndex() === weeks.length - 1}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <span className="text-sm font-medium text-foreground px-4">
             {selectedWeek && formatWeekDate(selectedWeek)}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToNextWeek}
-            disabled={getWeekIndex() === 0}
-          >
+          <Button variant="outline" size="sm" onClick={goToNextWeek} disabled={getWeekIndex() === 0}>
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
@@ -216,15 +207,13 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
                 <div className="space-y-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      {hasAnswered && (
-                        <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      )}
+                      {hasAnswered && <CheckCircle2 className="w-4 h-4 text-green-600" />}
                       {question.is_mandatory && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground">
                           Obligatoria
                         </span>
                       )}
-                      {question.scope === 'specific' && (
+                      {question.scope === "specific" && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                           {question.parties ? question.parties.name : question.teams.name}
                         </span>
@@ -236,8 +225,8 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
                   {!hasAnswered ? (
                     <div className="space-y-4">
                       <RadioGroup
-                        value={answers[question.id] || ''}
-                        onValueChange={(value) => setAnswers(prev => ({ ...prev, [question.id]: value }))}
+                        value={answers[question.id] || ""}
+                        onValueChange={(value) => setAnswers((prev) => ({ ...prev, [question.id]: value }))}
                       >
                         {question.answer_options
                           .sort((a: any, b: any) => a.option_order - b.option_order)
@@ -253,7 +242,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
                       <Button
                         onClick={() => handleAnswer(question.id)}
                         className="w-full"
-                        variant={module === 'politica' ? 'default' : 'secondary'}
+                        variant={module === "politica" ? "default" : "secondary"}
                       >
                         Enviar Respuesta
                       </Button>
@@ -271,18 +260,18 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
                           </div>
                           <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                             <div
-                              className={`h-full transition-all ${module === 'politica' ? 'bg-primary' : 'bg-secondary'}`}
+                              className={`h-full transition-all ${module === "politica" ? "bg-primary" : "bg-secondary"}`}
                               style={{ width: `${option.percentage}%` }}
                             />
-                      </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
 
-            <QuestionComments questionId={question.id} />
-          </Card>
+                <QuestionComments questionId={question.id} />
+              </Card>
             );
           })}
         </div>

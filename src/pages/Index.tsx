@@ -12,15 +12,15 @@ const Index = () => {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/');
+      navigate("/");
     } else if (!loading && user && isAdmin) {
-      navigate('/admin');
+      navigate("/admin");
     }
   }, [user, loading, isAdmin, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate("/");
   };
 
   if (loading) {
@@ -49,7 +49,7 @@ const Index = () => {
           <Logo />
           <div className="flex items-center gap-4">
             {isAdmin && (
-              <Button variant="outline" onClick={() => navigate('/admin')}>
+              <Button variant="outline" onClick={() => navigate("/admin")}>
                 Panel Admin
               </Button>
             )}

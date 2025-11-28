@@ -11,7 +11,7 @@ import { StatsFilters, FilterState } from "./StatsFilters";
 import { QuestionComments } from "./QuestionComments";
 
 interface WeeklySurveysProps {
-  module: 'politica' | 'futbol';
+  module: "politica" | "futbol";
   userId: string;
 }
 
@@ -36,34 +36,37 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
 
   useEffect(() => {
     // Reload results when filters change
-    Object.keys(userAnswers).forEach(questionId => {
+    Object.keys(userAnswers).forEach((questionId) => {
       loadResults(questionId);
     });
   }, [filters]);
 
   const loadWeeklyQuestions = async () => {
     const weekStart = getCurrentWeekStart();
-    
+
     const { data: questionsData } = await supabase
-      .from('questions')
-      .select('*, answer_options(*), parties(name), teams(name)')
-      .eq('module', module)
-      .eq('week_start_date', weekStart)
-      .order('is_mandatory', { ascending: false });
+      .from("questions")
+      .select("*, answer_options(*), parties(name), teams(name)")
+      .eq("module", module)
+      .eq("week_start_date", weekStart)
+      .order("is_mandatory", { ascending: false });
 
     if (questionsData) {
       setQuestions(questionsData);
 
       // Load user's existing answers
       const { data: userAnswersData } = await supabase
-        .from('user_answers')
-        .select('*, answer_options(id, question_id, text)')
-        .eq('user_id', userId)
-        .in('question_id', questionsData.map(q => q.id));
+        .from("user_answers")
+        .select("*, answer_options(id, question_id, text)")
+        .eq("user_id", userId)
+        .in(
+          "question_id",
+          questionsData.map((q) => q.id),
+        );
 
       if (userAnswersData) {
         const answersMap: Record<string, any> = {};
-        userAnswersData.forEach(ua => {
+        userAnswersData.forEach((ua) => {
           answersMap[ua.answer_options.question_id] = ua;
         });
         setUserAnswers(answersMap);
@@ -77,19 +80,18 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   };
 
   const loadResults = async (questionId: string) => {
-    const { data: statsData, error } = await supabase
-      .rpc('get_question_stats_filtered', {
-        question_uuid: questionId,
-        filter_party_id: filters.partyId,
-        filter_team_id: filters.teamId,
-        filter_gender: filters.gender as any,
-        filter_age_min: filters.ageMin,
-        filter_age_max: filters.ageMax,
-      });
+    const { data: statsData, error } = await supabase.rpc("get_question_stats_filtered", {
+      question_uuid: questionId,
+      filter_party_id: filters.partyId,
+      filter_team_id: filters.teamId,
+      filter_gender: filters.gender as any,
+      filter_age_min: filters.ageMin,
+      filter_age_max: filters.ageMax,
+    });
 
     if (statsData && !error) {
       const total = statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
-      const options = statsData.map(stat => ({
+      const options = statsData.map((stat) => ({
         id: stat.option_id,
         text: stat.option_text,
         option_order: stat.option_order,
@@ -97,7 +99,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
         percentage: stat.percentage,
       }));
 
-      setResults(prev => ({
+      setResults((prev) => ({
         ...prev,
         [questionId]: { options, total },
       }));
@@ -117,7 +119,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('user_answers').insert({
+      const { error } = await supabase.from("user_answers").insert({
         user_id: userId,
         question_id: questionId,
         answer_option_id: optionId,
@@ -131,7 +133,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
       });
 
       await loadResults(questionId);
-      setUserAnswers(prev => ({
+      setUserAnswers((prev) => ({
         ...prev,
         [questionId]: { answer_option_id: optionId },
       }));
@@ -149,9 +151,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   if (questions.length === 0) {
     return (
       <Card className="p-8 text-center bg-card">
-        <p className="text-muted-foreground">
-          No hay encuestas disponibles para esta semana
-        </p>
+        <p className="text-muted-foreground">No hay encuestas disponibles para esta semana</p>
       </Card>
     );
   }
@@ -159,11 +159,9 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-display font-bold text-foreground">
-          Encuestas de esta semana
-        </h2>
+        <h2 className="text-2xl font-display font-bold text-foreground">Encuestas de esta semana</h2>
         <span className="text-sm text-muted-foreground">
-          {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
         </span>
       </div>
 
@@ -184,7 +182,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
                         Obligatoria
                       </span>
                     )}
-                    {question.scope === 'specific' && (
+                    {question.scope === "specific" && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
                         {question.parties ? question.parties.name : question.teams.name}
                       </span>
@@ -193,7 +191,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
                   <h3 className="text-lg font-semibold text-foreground">{question.text}</h3>
                 </div>
                 {hasAnswered && (
-                  <CheckCircle2 className={`w-6 h-6 ${module === 'politica' ? 'text-primary' : 'text-secondary'}`} />
+                  <CheckCircle2 className={`w-6 h-6 ${module === "politica" ? "text-primary" : "text-secondary"}`} />
                 )}
               </div>
 
@@ -215,16 +213,16 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
                   <Button
                     onClick={() => handleAnswer(question.id)}
                     disabled={loading}
-                    className={module === 'politica' ? 'bg-primary hover:bg-primary/90' : 'bg-secondary hover:bg-secondary/90'}
+                    className={
+                      module === "politica" ? "bg-primary hover:bg-primary/90" : "bg-secondary hover:bg-secondary/90"
+                    }
                   >
                     Enviar respuesta
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm font-semibold text-foreground">
-                    Resultados ({result?.total || 0} respuestas):
-                  </p>
+                  <p className="text-sm font-semibold text-foreground">Resultados ({result?.total || 0} respuestas):</p>
                   {result?.options.map((option: any) => (
                     <div key={option.id} className="space-y-1">
                       <div className="flex justify-between items-center text-sm">
@@ -233,7 +231,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
                       </div>
                       <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                         <div
-                          className={`h-full transition-all ${module === 'politica' ? 'bg-primary' : 'bg-secondary'}`}
+                          className={`h-full transition-all ${module === "politica" ? "bg-primary" : "bg-secondary"}`}
                           style={{ width: `${option.percentage}%` }}
                         />
                       </div>

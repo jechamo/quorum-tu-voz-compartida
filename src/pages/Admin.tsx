@@ -20,9 +20,9 @@ export default function Admin() {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/');
+      navigate("/");
     } else if (!loading && user && !isAdmin) {
-      navigate('/home');
+      navigate("/home");
     }
   }, [user, loading, isAdmin, navigate]);
 
@@ -31,8 +31,8 @@ export default function Admin() {
       await signOut();
       // Navigation will be handled by the AuthContext's onAuthStateChange
     } catch (error) {
-      console.error('Error signing out:', error);
-      navigate('/');
+      console.error("Error signing out:", error);
+      navigate("/");
     }
   };
 
@@ -55,7 +55,7 @@ export default function Admin() {
       <header className="border-b border-border bg-card shadow-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/home')}>
+            <Button variant="ghost" size="icon" onClick={() => navigate("/home")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo />
@@ -71,19 +71,29 @@ export default function Admin() {
 
       <main className="container mx-auto px-4 py-8">
         <Card className="p-6 shadow-elevated bg-card">
-          <h1 className="text-3xl font-display font-bold text-foreground mb-6">
-            Panel de Administración
-          </h1>
+          <h1 className="text-3xl font-display font-bold text-foreground mb-6">Panel de Administración</h1>
 
           <Tabs defaultValue="questions" className="w-full">
             <div className="overflow-x-auto -mx-2 px-2 mb-6">
               <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground min-w-max w-full md:grid md:grid-cols-6">
-                <TabsTrigger value="questions" className="whitespace-nowrap">Encuestas</TabsTrigger>
-                <TabsTrigger value="stats" className="whitespace-nowrap">Estadísticas</TabsTrigger>
-                <TabsTrigger value="comments" className="whitespace-nowrap">Comentarios</TabsTrigger>
-                <TabsTrigger value="parties" className="whitespace-nowrap">Partidos</TabsTrigger>
-                <TabsTrigger value="teams" className="whitespace-nowrap">Equipos</TabsTrigger>
-                <TabsTrigger value="admins" className="whitespace-nowrap">Admins</TabsTrigger>
+                <TabsTrigger value="questions" className="whitespace-nowrap">
+                  Encuestas
+                </TabsTrigger>
+                <TabsTrigger value="stats" className="whitespace-nowrap">
+                  Estadísticas
+                </TabsTrigger>
+                <TabsTrigger value="comments" className="whitespace-nowrap">
+                  Comentarios
+                </TabsTrigger>
+                <TabsTrigger value="parties" className="whitespace-nowrap">
+                  Partidos
+                </TabsTrigger>
+                <TabsTrigger value="teams" className="whitespace-nowrap">
+                  Equipos
+                </TabsTrigger>
+                <TabsTrigger value="admins" className="whitespace-nowrap">
+                  Admins
+                </TabsTrigger>
               </TabsList>
             </div>
 

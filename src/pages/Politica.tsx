@@ -14,7 +14,7 @@ export default function Politica() {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/auth/politica');
+      navigate("/auth/politica");
     }
   }, [user, loading, navigate]);
 
@@ -37,11 +37,7 @@ export default function Politica() {
       <header className="border-b border-border bg-card shadow-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate('/home')}
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate("/home")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <Logo />

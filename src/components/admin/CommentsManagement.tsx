@@ -31,18 +31,18 @@ export const CommentsManagement = () => {
 
   const loadComments = async () => {
     const { data, error } = await supabase
-      .from('question_comments')
-      .select('*, profiles(username), questions(text, module)')
-      .order('created_at', { ascending: false });
+      .from("question_comments")
+      .select("*, profiles(username), questions(text, module)")
+      .order("created_at", { ascending: false });
 
     if (error) {
-      console.error('Error loading comments:', error);
+      console.error("Error loading comments:", error);
       return;
     }
 
     if (data) {
-      setPoliticaComments(data.filter(c => c.questions?.module === 'politica'));
-      setFutbolComments(data.filter(c => c.questions?.module === 'futbol'));
+      setPoliticaComments(data.filter((c) => c.questions?.module === "politica"));
+      setFutbolComments(data.filter((c) => c.questions?.module === "futbol"));
     }
   };
 
@@ -51,10 +51,7 @@ export const CommentsManagement = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('question_comments')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.from("question_comments").delete().eq("id", id);
 
       if (error) throw error;
 
@@ -87,17 +84,13 @@ export const CommentsManagement = () => {
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1 space-y-2">
                 <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {comment.profiles?.username || 'Usuario'}
-                  </p>
+                  <p className="text-sm font-medium text-foreground">{comment.profiles?.username || "Usuario"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(comment.created_at).toLocaleString('es-ES')}
+                    {new Date(comment.created_at).toLocaleString("es-ES")}
                   </p>
                 </div>
                 <div className="bg-muted/50 p-3 rounded-md">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">
-                    Pregunta: {comment.questions?.text}
-                  </p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Pregunta: {comment.questions?.text}</p>
                   <p className="text-sm text-foreground">{comment.comment}</p>
                 </div>
               </div>
@@ -120,22 +113,14 @@ export const CommentsManagement = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-display font-bold text-foreground mb-2">
-          Gestión de Comentarios
-        </h2>
-        <p className="text-muted-foreground">
-          Revisa y modera los comentarios de los usuarios
-        </p>
+        <h2 className="text-2xl font-display font-bold text-foreground mb-2">Gestión de Comentarios</h2>
+        <p className="text-muted-foreground">Revisa y modera los comentarios de los usuarios</p>
       </div>
 
       <Tabs defaultValue="politica" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="politica">
-            Política ({politicaComments.length})
-          </TabsTrigger>
-          <TabsTrigger value="futbol">
-            Fútbol ({futbolComments.length})
-          </TabsTrigger>
+          <TabsTrigger value="politica">Política ({politicaComments.length})</TabsTrigger>
+          <TabsTrigger value="futbol">Fútbol ({futbolComments.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="politica" className="mt-6">
