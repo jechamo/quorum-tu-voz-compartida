@@ -52,7 +52,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
     }
 
     // Ejecutamos la consulta con el orden y límite
-    const { data } = await query.order("week_start_date", { ascending: false }).limit(4);
+    const { data } = await query.order("week_start_date", { ascending: false }).limit(100);
 
     if (data) {
       const uniqueWeeks = Array.from(new Set(data.map((d) => d.week_start_date)));
