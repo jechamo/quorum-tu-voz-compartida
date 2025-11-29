@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { StatsFilters, FilterState } from "./StatsFilters";
 import { useToast } from "@/hooks/use-toast";
 import { QuestionComments } from "./QuestionComments";
+import { useAuth } from "@/contexts/AuthContext"; // <--- 1. Importamos useAuth
 
 interface WeeklyHistoryProps {
   module: "politica" | "futbol";
@@ -16,6 +17,7 @@ interface WeeklyHistoryProps {
 
 export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   const { toast } = useToast();
+  const { isAdmin } = useAuth(); // <--- 2. Obtenemos si es admin
   const [weeks, setWeeks] = useState<any[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [weekData, setWeekData] = useState<any>(null);
@@ -31,7 +33,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
   useEffect(() => {
     loadWeeks();
-  }, [module]);
+  }, [module, isAdmin]); // Añadimos isAdmin a las dependencias por si cambia
 
   useEffect(() => {
     if (selectedWeek) {
@@ -40,19 +42,26 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   }, [selectedWeek, filters]);
 
   const loadWeeks = async () => {
-    // Get last 4 weeks
-    const { data } = await supabase
-      .from("questions")
-      .select("week_start_date")
-      .eq("module", module)
-      .order("week_start_date", { ascending: false })
-      .limit(4);
+    // 3. Construimos la consulta base
+    let query = supabase.from("questions").select("week_start_date").eq("module", module);
+
+    // 4. Si NO es admin, filtramos para que solo vea hasta hoy
+    if (!isAdmin) {
+      const today = new Date().toISOString().split("T")[0];
+      query = query.lte("week_start_date", today);
+    }
+
+    // Ejecutamos la consulta con el orden y límite
+    const { data } = await query.order("week_start_date", { ascending: false }).limit(4);
 
     if (data) {
       const uniqueWeeks = Array.from(new Set(data.map((d) => d.week_start_date)));
       setWeeks(uniqueWeeks);
       if (uniqueWeeks.length > 0) {
         setSelectedWeek(uniqueWeeks[0]);
+      } else {
+        setWeeks([]);
+        setSelectedWeek(null);
       }
     }
   };
