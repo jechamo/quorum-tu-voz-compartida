@@ -221,9 +221,12 @@ serve(async (req) => {
 
     if (effectiveMode === "batch" && Array.isArray(entitiesList) && entitiesList.length > 0) {
       // ---- MODO BATCH ----
+
       // 1) Bloque GENERAL por módulo (para la pregunta general)
       const generalQuery = buildGeneralQuery(effectiveModule, topic);
       const generalResults = await tavilySearch(generalQuery, TAVILY_API_KEY, domains, true, 7);
+
+      console.log("ℹ️ [BATCH] Resultados GENERAL:", generalResults.length);
 
       const generalBlock =
         generalResults.length > 0
@@ -236,7 +239,17 @@ serve(async (req) => {
           const q = buildEntityQuery(ent, effectiveModule, topic);
           const rawResults = await tavilySearch(q, TAVILY_API_KEY, domains, true, 5);
 
-          const filtered = rawResults.filter((r) => isResultRelevantToEntity(r, ent, effectiveModule));
+          console.log(`ℹ️ [BATCH] Entity="${ent}" rawResults:`, rawResults.length);
+
+          let filtered = rawResults.filter((r) => isResultRelevantToEntity(r, ent, effectiveModule));
+
+          console.log(`ℹ️ [BATCH] Entity="${ent}" filtered:`, filtered.length);
+
+          // Fallback si el filtro se pasa de estricto
+          if (filtered.length === 0 && rawResults.length > 0) {
+            console.log(`⚠️ [BATCH] Filtro muy agresivo para "${ent}", usando rawResults.`);
+            filtered = rawResults;
+          }
 
           return { entity: ent, results: filtered };
         }),
@@ -260,12 +273,27 @@ serve(async (req) => {
 
       const rawResults = await tavilySearch(q, TAVILY_API_KEY, domains, true, 5);
 
-      const filtered = ent ? rawResults.filter((r) => isResultRelevantToEntity(r, ent, effectiveModule)) : rawResults;
+      console.log("ℹ️ [SINGLE] Query:", q);
+      console.log("ℹ️ [SINGLE] rawResults:", rawResults.length);
+      rawResults.slice(0, 3).forEach((r: any, i: number) => {
+        console.log(`   [${i}]`, r.title, "->", r.url);
+      });
+
+      let filtered = ent ? rawResults.filter((r) => isResultRelevantToEntity(r, ent, effectiveModule)) : rawResults;
+
+      console.log("ℹ️ [SINGLE] Resultados después del filtro:", filtered.length, "(raw:", rawResults.length, ")");
+
+      // ⚠️ Si Tavily ha devuelto cosas pero el filtro se ha pasado de estricto,
+      // usamos los resultados sin filtrar como fallback.
+      if (filtered.length === 0 && rawResults.length > 0) {
+        console.log("⚠️ [SINGLE] Filtro demasiado agresivo, usando resultados sin filtrar para la entidad:", ent);
+        filtered = rawResults;
+      }
 
       if (filtered.length > 0) {
         contextNews = formatResultsBlock(filtered);
       } else {
-        console.log("❌ Sin noticias relevantes en la última semana para la entidad.");
+        console.log("❌ [SINGLE] Sin noticias relevantes en la última semana para la entidad (Tavily devolvió 0).");
         contextNews =
           "NO HAY NOTICIAS RECIENTES (últimos 7 días) para esta entidad. IMPORTANTE: No inventes noticias falsas. Genera una pregunta sobre un tema 'evergreen' (histórico/recurrente) de esta entidad.";
       }
