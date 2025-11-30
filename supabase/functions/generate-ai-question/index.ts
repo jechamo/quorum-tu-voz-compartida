@@ -2,24 +2,24 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 // Cabeceras para permitir que tu web llame a esta función (CORS)
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
   // 1. Si es una petición "OPTIONS" (el navegador preguntando si puede pasar), le decimos que sí.
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     // 2. Obtenemos los datos que nos envía el Frontend
     const { topic, entity, module } = await req.json();
-
+    
     // 3. Recuperamos la clave secreta de OpenAI (que configuraremos en el siguiente paso)
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
-      throw new Error("Falta la clave API de OpenAI en Supabase");
+      throw new Error('Falta la clave API de OpenAI en Supabase');
     }
 
     console.log(`Generando pregunta sobre: ${topic} para ${entity} (${module})`);
@@ -43,40 +43,40 @@ serve(async (req) => {
     `;
 
     // 5. Llamamos a OpenAI (GPT-4o-mini es rápido y barato)
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "system", content: systemPrompt }],
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt }
+        ],
         temperature: 0.7, // Creatividad media
       }),
     });
 
     const aiData = await response.json();
-
+    
     // 6. Extraemos y limpiamos la respuesta
     let content = aiData.choices[0].message.content;
     // A veces la IA pone ```json ... ```, lo quitamos por si acaso
-    content = content
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
+    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    
     const result = JSON.parse(content);
 
     // 7. Devolvemos la pregunta limpia al Frontend
     return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     console.error("Error en la función:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
