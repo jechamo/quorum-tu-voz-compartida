@@ -51,6 +51,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
+        tools: [{ type: "web_search" }],
         messages: [{ role: "system", content: systemPrompt }],
         temperature: 0.7, // Creatividad media
       }),
