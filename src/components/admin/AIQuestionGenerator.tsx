@@ -28,21 +28,19 @@ export const AIQuestionGenerator = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // -- CONFIGURACIÓN --
+  // Configuración
   const [module, setModule] = useState<"politica" | "futbol">("politica");
-  // AQUÍ ESTÁ TU PREFERENCIA: Por defecto gpt-4o-mini
-  const [aiModel, setAiModel] = useState("gpt-4o-mini");
+  const [aiModel, setAiModel] = useState("gpt-4o-mini"); // Por defecto
   const [isBatchMode, setIsBatchMode] = useState(false);
 
   const [parties, setParties] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
 
-  // Inputs
   const [selectedEntityId, setSelectedEntityId] = useState("");
   const [topic, setTopic] = useState("");
   const [weekStartDate, setWeekStartDate] = useState<Date | undefined>(new Date(getCurrentWeekStart()));
 
-  // Resultados (Lista)
+  // Resultados
   const [results, setResults] = useState<GeneratedQuestion[]>([]);
 
   useEffect(() => {
@@ -57,7 +55,7 @@ export const AIQuestionGenerator = () => {
 
   const handleGenerate = async () => {
     if (!isBatchMode && !selectedEntityId) {
-      toast({ title: "Error", description: "Selecciona una entidad o activa el modo Lote.", variant: "destructive" });
+      toast({ title: "Error", description: "Selecciona una entidad.", variant: "destructive" });
       return;
     }
 
@@ -69,23 +67,24 @@ export const AIQuestionGenerator = () => {
       let payload: any = {
         topic: topic.trim(),
         module,
-        model: aiModel, // Enviamos el modelo seleccionado (gpt-4o-mini por defecto)
+        model: aiModel,
         mode: isBatchMode ? "batch" : "single",
       };
 
       if (isBatchMode) {
+        // Enviamos nombres para el batch
         payload.entitiesList = entityList.map((e) => e.name);
       } else {
         payload.entity = entityList.find((e) => e.id === selectedEntityId)?.name || "Entidad";
       }
 
-      // Llamada al Backend (que ya soporta búsqueda en Tavily y GPT-5)
       const { data, error } = await supabase.functions.invoke("generate-ai-question", { body: payload });
 
       if (error) throw error;
 
       if (data && data.results) {
         const processed = data.results.map((item: any, idx: number) => {
+          // Intentar vincular ID real si es batch
           let matchedId = selectedEntityId;
           let matchedName = item.target_entity;
 
@@ -97,7 +96,7 @@ export const AIQuestionGenerator = () => {
               matchedId = match.id;
               matchedName = match.name;
             } else {
-              matchedId = "";
+              matchedId = ""; // Es una pregunta general
               matchedName = "General / Actualidad";
             }
           }
@@ -107,30 +106,25 @@ export const AIQuestionGenerator = () => {
             question: item.question,
             options: item.options,
             target_entity_id: matchedId,
-            target_entity_name: matchedName || (isBatchMode ? "General" : payload.entity),
+            target_entity_name: matchedName,
           };
         });
         setResults(processed);
-        toast({ title: "¡Noticias analizadas!", description: `Se han generado ${processed.length} propuestas.` });
+        toast({
+          title: "¡Noticias encontradas!",
+          description: `Se han generado ${processed.length} preguntas basadas en actualidad.`,
+        });
       }
     } catch (error: any) {
       console.error("Error:", error);
-      toast({
-        title: "Error",
-        description: "Fallo al conectar con la IA. ¿Tienes la API de Tavily configurada?",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Fallo al conectar con la IA.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handlePublish = async (q: GeneratedQuestion) => {
-    if (!weekStartDate) {
-      toast({ title: "Fecha requerida", description: "Selecciona una fecha arriba.", variant: "destructive" });
-      return;
-    }
-
+    if (!weekStartDate) return;
     try {
       const qPayload: any = {
         text: q.question,
@@ -158,7 +152,7 @@ export const AIQuestionGenerator = () => {
     }
   };
 
-  // Helpers de edición
+  // Helpers de edición local
   const updateText = (id: string, field: "question" | "option", val: string, optIdx?: number) => {
     setResults((prev) =>
       prev.map((item) => {
@@ -187,26 +181,25 @@ export const AIQuestionGenerator = () => {
         <Card className="border-l-4 border-l-primary shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-blue-600" />
+              <Globe className="w-5 h-5 text-blue-500" />
               Redacción IA
             </CardTitle>
-            <CardDescription>Busca noticias reales y genera debate.</CardDescription>
+            <CardDescription>Busca noticias reales en internet y genera debate.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* SELECTOR DE MODELO */}
             <div className="flex items-center justify-between bg-muted/40 p-2 rounded border">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-500" />
                 <Label>Modelo</Label>
               </div>
               <Select value={aiModel} onValueChange={setAiModel}>
-                <SelectTrigger className="w-[160px] h-8 text-xs bg-white">
+                <SelectTrigger className="w-[140px] h-8 text-xs bg-black">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gpt-4o-mini">GPT-4o Mini (Default)</SelectItem>
+                  <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
                   <SelectItem value="gpt-5-mini">GPT-5 Mini (Preview)</SelectItem>
-                  <SelectItem value="gpt-4o">GPT-4o (Experto)</SelectItem>
+                  <SelectItem value="gpt-4o">GPT-4o (Completo)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -232,9 +225,9 @@ export const AIQuestionGenerator = () => {
             </div>
 
             <div className="flex items-center justify-between py-2">
-              <Label htmlFor="batch" className="flex flex-col cursor-pointer">
+              <Label htmlFor="batch" className="flex flex-col">
                 <span className="flex items-center gap-2">
-                  <Layers className="w-4 h-4" /> Modo Lote (Batch)
+                  <Layers className="w-4 h-4" /> Modo Redacción (Lote)
                 </span>
                 <span className="font-normal text-xs text-muted-foreground">Generar batería completa de preguntas</span>
               </Label>
@@ -263,7 +256,7 @@ export const AIQuestionGenerator = () => {
               <Label>Tema / Búsqueda (Opcional)</Label>
               <Textarea
                 placeholder={
-                  isBatchMode ? "Ej: Escándalos recientes, Polémica arbitral..." : "Ej: Declaraciones de ayer..."
+                  isBatchMode ? "Ej: Escándalos de corrupción, Arbitrajes..." : "Ej: Declaraciones de ayer..."
                 }
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
@@ -304,7 +297,7 @@ export const AIQuestionGenerator = () => {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md"
             >
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              {loading ? "Investigando..." : "Buscar y Generar"}
+              {loading ? "Buscando noticias..." : "Buscar y Generar"}
             </Button>
           </CardContent>
         </Card>
@@ -314,7 +307,7 @@ export const AIQuestionGenerator = () => {
       <div className="lg:col-span-8 space-y-4">
         {results.length > 0 && (
           <div className="flex justify-between items-center pb-2">
-            <h3 className="text-xl font-bold text-foreground">Borradores ({results.length})</h3>
+            <h3 className="text-xl font-bold text-foreground">Noticias Detectadas ({results.length})</h3>
             <Button variant="destructive" size="sm" onClick={() => setResults([])}>
               <Trash2 className="w-4 h-4 mr-2" /> Limpiar
             </Button>
@@ -324,7 +317,7 @@ export const AIQuestionGenerator = () => {
         <div className="grid gap-6">
           {results.map((item) => (
             <Card key={item.id} className="border-2 border-gray-800 shadow-lg bg-card overflow-hidden">
-              {/* CABECERA: GRIS OSCURO */}
+              {/* CABECERA OSCURA */}
               <CardHeader className="bg-gray-800 py-3 px-4 flex flex-row items-center justify-between space-y-0 border-b border-gray-700">
                 <div className="flex items-center gap-3">
                   <span className="px-2 py-1 rounded bg-blue-900/50 text-blue-100 text-xs font-bold border border-blue-800 uppercase tracking-wide">
@@ -355,11 +348,10 @@ export const AIQuestionGenerator = () => {
                   <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Pregunta
                   </Label>
-                  {/* TEXTAREA: FONDO CLARO PARA LEGIBILIDAD SOBRE CARD OSCURA */}
                   <Textarea
                     value={item.question}
                     onChange={(e) => updateText(item.id, "question", e.target.value)}
-                    className="font-bold text-lg min-h-[70px] border-gray-700 bg-gray-900/50 text-gray-100 shadow-sm focus-visible:ring-blue-500"
+                    className="font-semibold text-lg min-h-[70px] border-gray-200 bg-white text-gray-900 shadow-sm focus-visible:ring-blue-500"
                   />
                 </div>
 
@@ -370,14 +362,13 @@ export const AIQuestionGenerator = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {item.options.map((opt, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-700 text-gray-200 text-xs font-bold border border-gray-600">
+                        <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 text-xs font-bold">
                           {idx + 1}
                         </span>
-                        {/* INPUT: FONDO CLARO PARA LEGIBILIDAD */}
                         <Input
                           value={opt}
                           onChange={(e) => updateText(item.id, "option", e.target.value, idx)}
-                          className="h-9 border-gray-700 bg-gray-900/50 text-gray-100 shadow-sm focus-visible:ring-blue-500 font-medium"
+                          className="h-9 border-gray-200 bg-white text-gray-900 shadow-sm focus-visible:ring-blue-500"
                         />
                       </div>
                     ))}
@@ -388,7 +379,7 @@ export const AIQuestionGenerator = () => {
           ))}
 
           {results.length === 0 && !loading && (
-            <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-gray-800 rounded-lg bg-gray-900/20 text-muted-foreground">
+            <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed rounded-lg bg-muted/10 text-muted-foreground">
               <Globe className="w-12 h-12 mb-4 opacity-20" />
               <p>Configura el agente a la izquierda para buscar noticias.</p>
             </div>
