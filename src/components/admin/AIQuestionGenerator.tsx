@@ -233,12 +233,10 @@ export const AIQuestionGenerator = () => {
           </Button>
         </CardContent>
       </Card>
-      // ... (parte superior del archivo igual) ...
-      {/* --- PANEL DERECHO: RESULTADO --- */}
+
+      {/* --- PANEL DERECHO: RESULTADO (CORREGIDO PARA LEGIBILIDAD) --- */}
       {generatedData ? (
         <Card className="shadow-lg border-2 border-purple-100 animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white">
-          {" "}
-          {/* Fondo blanco explícito */}
           <CardHeader className="bg-purple-50 pb-4 border-b border-purple-100">
             <div className="flex justify-between items-start">
               <div>
@@ -258,17 +256,15 @@ export const AIQuestionGenerator = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-6 pt-6 bg-white">
-            {" "}
-            {/* Fondo blanco explícito */}
             <div className="space-y-2">
               <Label className="text-purple-800 font-bold text-base">Pregunta Generada</Label>
-              {/* Textarea corregido para alto contraste */}
               <Textarea
                 value={generatedData.question}
                 onChange={(e) => setGeneratedData({ ...generatedData, question: e.target.value })}
                 className="font-medium text-lg min-h-[80px] border-2 border-purple-200 focus-visible:ring-purple-500 bg-white text-black shadow-sm"
               />
             </div>
+
             <div className="space-y-4">
               <Label className="text-purple-800 font-bold text-base">Opciones de Respuesta</Label>
               <div className="space-y-3">
@@ -277,7 +273,6 @@ export const AIQuestionGenerator = () => {
                     <span className="flex items-center justify-center w-7 h-7 rounded-full bg-purple-600 text-white text-sm font-bold shadow-sm">
                       {idx + 1}
                     </span>
-                    {/* Input corregido para alto contraste */}
                     <Input
                       value={opt}
                       onChange={(e) => {
@@ -291,11 +286,11 @@ export const AIQuestionGenerator = () => {
                 ))}
               </div>
             </div>
+
             <div className="pt-6 border-t border-gray-200 space-y-2">
               <Label className="text-gray-700 font-semibold">Fecha de Publicación</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  {/* Botón de fecha corregido */}
                   <Button
                     variant={"outline"}
                     className={cn(
@@ -323,6 +318,7 @@ export const AIQuestionGenerator = () => {
                 </PopoverContent>
               </Popover>
             </div>
+
             <Button
               onClick={handleSave}
               disabled={saving || !weekStartDate}
@@ -335,7 +331,7 @@ export const AIQuestionGenerator = () => {
           </CardContent>
         </Card>
       ) : (
-        // Estado vacío (sin cambios)
+        // Estado vacío (placeholder)
         <div className="hidden lg:flex h-full items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-12 text-center text-gray-500">
           <div>
             <Sparkles className="w-12 h-12 mx-auto mb-4 text-purple-300" />
@@ -344,7 +340,6 @@ export const AIQuestionGenerator = () => {
           </div>
         </div>
       )}
-      // ... (cierre del componente) ...
     </div>
   );
 };
