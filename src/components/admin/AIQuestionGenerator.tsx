@@ -236,8 +236,8 @@ export const AIQuestionGenerator = () => {
 
       {/* --- PANEL DERECHO: RESULTADO --- */}
       {generatedData ? (
-        <Card className="shadow-lg border-2 border-purple-100 animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white">
-          <CardHeader className="bg-purple-50/50 pb-4 border-b border-purple-100">
+        <Card className="shadow-lg border-2 border-purple-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <CardHeader className="bg-purple-50/50 pb-4 border-b">
             <div className="flex justify-between items-start">
               <div>
                 <CardTitle className="text-lg text-purple-900">Borrador de Encuesta</CardTitle>
@@ -247,29 +247,31 @@ export const AIQuestionGenerator = () => {
                 variant="ghost"
                 size="sm"
                 onClick={() => setGeneratedData(null)}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground"
               >
                 <RotateCcw className="w-4 h-4 mr-1" /> Descartar
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6 bg-white">
+          <CardContent className="space-y-6 pt-6">
             <div className="space-y-2">
-              <Label className="text-purple-700 font-semibold text-base">Pregunta Generada</Label>
+              <Label className="text-purple-700 font-semibold">Pregunta Generada</Label>
+              {/* CAMBIO AQUÍ: Añadido bg-white/90 y text-gray-900 para contraste */}
               <Textarea
                 value={generatedData.question}
                 onChange={(e) => setGeneratedData({ ...generatedData, question: e.target.value })}
-                className="font-medium text-lg min-h-[80px] border-purple-200 focus-visible:ring-purple-400 bg-white text-gray-900 shadow-sm"
+                className="font-medium text-lg min-h-[80px] border-purple-200 focus-visible:ring-purple-400 bg-white/90 text-gray-900"
               />
             </div>
 
             <div className="space-y-3">
-              <Label className="text-purple-700 font-semibold text-base">Opciones de Respuesta</Label>
+              <Label className="text-purple-700 font-semibold">Opciones de Respuesta</Label>
               {generatedData.options.map((opt, idx) => (
                 <div key={idx} className="flex items-center gap-3">
-                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-purple-100 text-purple-700 text-sm font-bold shadow-sm">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold">
                     {idx + 1}
                   </span>
+                  {/* CAMBIO AQUÍ: Añadido bg-white/90 y text-gray-900 para contraste */}
                   <Input
                     value={opt}
                     onChange={(e) => {
@@ -277,39 +279,39 @@ export const AIQuestionGenerator = () => {
                       newOpts[idx] = e.target.value;
                       setGeneratedData({ ...generatedData, options: newOpts });
                     }}
-                    className="border-purple-100 focus-visible:ring-purple-400 bg-white text-gray-900 shadow-sm font-medium"
+                    className="border-purple-100 focus-visible:ring-purple-400 bg-white/90 text-gray-900 font-medium"
                   />
                 </div>
               ))}
             </div>
 
             <div className="pt-4 border-t space-y-2">
-              <Label className="text-gray-700 font-semibold">Fecha de Publicación</Label>
+              <Label>Fecha de Publicación</Label>
               <Popover>
                 <PopoverTrigger asChild>
+                  {/* CAMBIO AQUÍ: Añadido bg-white/90 y text-gray-900 para el botón de fecha también */}
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-medium border-2 bg-white text-gray-900 shadow-sm hover:bg-gray-50",
-                      !weekStartDate && "text-gray-500 border-dashed",
+                      "w-full justify-start text-left font-normal border-dashed border-2 bg-white/90 text-gray-900",
+                      !weekStartDate && "text-muted-foreground",
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-5 w-5 text-purple-600" />
+                    <CalendarIcon className="mr-2 h-4 w-4 text-purple-600" />
                     {weekStartDate ? (
-                      <span className="font-medium">{format(weekStartDate, "PPP", { locale: es })}</span>
+                      <span className="font-medium text-gray-900">{format(weekStartDate, "PPP", { locale: es })}</span>
                     ) : (
                       <span>Selecciona la semana...</span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white border-2 shadow-xl" align="start">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={weekStartDate}
                     onSelect={handleDateSelect}
                     initialFocus
                     locale={es}
-                    className="p-3 rounded-md border"
                   />
                 </PopoverContent>
               </Popover>
@@ -318,7 +320,7 @@ export const AIQuestionGenerator = () => {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="w-full bg-green-600 hover:bg-green-700 text-white shadow-md h-12 text-base mt-2"
+              className="w-full bg-green-600 hover:bg-green-700 text-white shadow-sm"
               size="lg"
             >
               {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
