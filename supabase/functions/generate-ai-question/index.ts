@@ -9,90 +9,101 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    // 1. AHORA SÍ RECUPERAMOS 'model' DEL FRONTEND
     const { topic, entity, module, mode, entitiesList, model } = await req.json();
-
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY");
 
     if (!OPENAI_API_KEY || !TAVILY_API_KEY) throw new Error("Faltan API Keys");
 
-    // 2. LÓGICA DE BÚSQUEDA (TAVILY)
-    let searchQuery = "";
-    let domains = [];
+    // 1. ESTRATEGIA DE BÚSQUEDA INTELIGENTE
+    let contextNews = "";
 
-    // Filtros de dominios estrictos
-    if (module === "futbol") {
-      domains = ["marca.com", "as.com", "mundodeportivo.com", "sport.es", "relevo.com"];
-      searchQuery = `Noticias última hora polémica fútbol La Liga España ${mode === "batch" ? "actualidad general" : entity} ${topic || ""}`;
+    // Definimos dominios según el módulo
+    const domains =
+      module === "futbol"
+        ? ["marca.com", "as.com", "mundodeportivo.com", "sport.es", "relevo.com"]
+        : ["elpais.com", "elmundo.es", "elconfidencial.com", "okdiario.com", "eldiario.es", "abc.es", "elespanol.com"];
+
+    // Construimos la Query principal
+    let primaryQuery = "";
+    if (mode === "batch") {
+      primaryQuery = `Noticias última hora polémica ${module} España actualidad`;
     } else {
-      domains = ["elpais.com", "elmundo.es", "elconfidencial.com", "okdiario.com", "eldiario.es", "abc.es"];
-      searchQuery = `Noticias última hora polémica política España gobierno oposición ${mode === "batch" ? "actualidad general" : entity} ${topic || ""}`;
+      // Truco: Quitamos la palabra "polémica" de la búsqueda estricta para encontrar más resultados,
+      // la IA ya buscará la polémica dentro de la noticia.
+      primaryQuery = `${entity} ${module} España noticias última hora ${topic || ""}`;
     }
 
-    console.log(`🔎 Buscando (${searchQuery}) con modelo: ${model || "default"}...`);
+    console.log(`🔎 Buscando: "${primaryQuery}"`);
 
+    // Hacemos la búsqueda
     const searchResponse = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         api_key: TAVILY_API_KEY,
-        query: searchQuery,
+        query: primaryQuery,
         search_depth: "news",
         include_domains: domains,
-        max_results: mode === "batch" ? 7 : 4,
+        max_results: mode === "batch" ? 7 : 5, // Más resultados para tener donde elegir
       }),
     });
 
     const searchData = await searchResponse.json();
-    const contextNews = searchData.results
-      ? searchData.results.map((r: any) => `- ${r.title}: ${r.content}`).join("\n")
-      : "No hay noticias recientes.";
 
-    // 3. PROMPT DINÁMICO
+    if (searchData.results && searchData.results.length > 0) {
+      contextNews = searchData.results.map((r: any) => `- ${r.title}: ${r.content}`).join("\n");
+      console.log(`✅ Encontradas ${searchData.results.length} noticias.`);
+    } else {
+      console.log("⚠️ No se encontraron noticias específicas. Usando contexto general.");
+      contextNews =
+        "No hay noticias de última hora específicas. Usa tu conocimiento general sobre polémicas recientes y recurrentes de esta entidad.";
+    }
+
+    // 2. PROMPT "SALSERO" REFORZADO
     const systemPrompt = `
-      Eres un redactor jefe experto en ${module}.
+      Eres el redactor jefe más polémico de España.
       
-      NOTICIAS DE HOY:
+      TU MISIÓN: Generar debate social intenso.
+      
+      FUENTES (ÚSALAS SI PUEDES, SI NO, TIRA DE HEMEROTECA RECIENTE):
       ${contextNews}
 
       OBJETIVO:
       ${
         mode === "batch"
-          ? `Genera una lista de preguntas:
-           1. Una pregunta GENERAL sobre la noticia más importante del día.
-           2. Una pregunta ESPECÍFICA para cada uno de estos protagonistas: [${entitiesList ? entitiesList.join(", ") : ""}], PERO SOLO SI hay noticias relacionadas en el texto de arriba.`
-          : `Genera una encuesta polémica sobre: ${entity}.`
+          ? `Genera una batería de preguntas:
+           1. OBLIGATORIO: Una pregunta GENERAL sobre el tema más caliente del momento en ${module}.
+           2. OPCIONAL: Preguntas específicas para: [${entitiesList ? entitiesList.join(", ") : ""}].
+           IMPORTANTE: Intenta sacar al menos 3 preguntas en total. Si no hay noticia de hoy para un partido/equipo, busca su polémica más reciente (siempre hay algo).`
+          : `Genera una encuesta sobre: ${entity}. Si no hay noticia de hoy, usa su polémica recurrente más famosa.`
       }
 
-      REGLAS:
-      1. Tono incisivo y de debate actual.
-      2. Si no hay noticias sobre una entidad, NO inventes nada.
+      REGLAS DE ORO:
+      1. PREGUNTAS CORTAS Y DIRECTAS: "¿Es culpable...?", "¿Debe dimitir...?", "¿Acierto o error?".
+      2. OPCIONES CON ACTITUD: [Indignado], [Defensor a muerte], [Escéptico], [Indiferente].
+      3. PROHIBIDO: Preguntas tibias como "¿Qué opinas de la situación?".
       
       FORMATO JSON:
       {
         "results": [
-          { "question": "¿...?", "options": ["...", "...", "...", "..."], "target_entity": "Nombre o 'General'" }
+          { "question": "¿...?", "options": ["...", "...", "...", "..."], "target_entity": "Nombre" }
         ]
       }
     `;
 
-    // 4. SELECCIÓN DEL MODELO (Aquí estaba el fallo antes)
-    const aiModel = model || "gpt-4o-mini"; // Prioriza el del front, si no usa mini
-
-    // Configuración del cuerpo de la petición
+    const aiModel = model || "gpt-4o-mini";
     const requestBody: any = {
       model: aiModel,
       messages: [{ role: "system", content: systemPrompt }],
       response_format: { type: "json_object" },
     };
 
-    // Ajuste para modelos nuevos (gpt-5 / o1) que usan parámetros distintos
     if (aiModel.includes("gpt-5") || aiModel.startsWith("o1")) {
       requestBody.max_completion_tokens = 4000;
     } else {
       requestBody.max_tokens = 4000;
-      requestBody.temperature = 0.8;
+      requestBody.temperature = 0.9; // Subimos la temperatura para que sea más creativo si no hay noticias
     }
 
     const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
