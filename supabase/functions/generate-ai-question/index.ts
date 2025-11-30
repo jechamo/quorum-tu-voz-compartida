@@ -6,59 +6,78 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { topic, entity, module } = await req.json();
+    // AHORA RECIBIMOS 'mode' Y 'entitiesList' PARA PODER HACER LA BÚSQUEDA MASIVA
+    const { topic, entity, module, mode, entitiesList } = await req.json();
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY"); // <--- Necesitas esto
+    const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY");
 
-    if (!OPENAI_API_KEY) throw new Error("Falta OPENAI_API_KEY");
-    if (!TAVILY_API_KEY) throw new Error("Falta TAVILY_API_KEY para buscar noticias");
+    if (!OPENAI_API_KEY || !TAVILY_API_KEY) throw new Error("Faltan API Keys");
 
-    // 1. BÚSQUEDA DE NOTICIAS REALES (Esto sustituye al web_search)
-    console.log(`🔎 Buscando noticias sobre: ${entity} ${topic || ""}`);
+    // 1. CONFIGURACIÓN DE BÚSQUEDA INTELIGENTE
+    let searchQuery = "";
+    let domains = [];
+
+    // Filtro de dominios según el tema para ser MÁS ESTRICTOS
+    if (module === "futbol") {
+      domains = ["marca.com", "as.com", "mundodeportivo.com", "sport.es", "relevo.com"];
+      searchQuery = `Noticias última hora polémica fútbol La Liga España ${mode === "batch" ? "actualidad general" : entity} ${topic || ""}`;
+    } else {
+      domains = ["elpais.com", "elmundo.es", "elconfidencial.com", "okdiario.com", "eldiario.es", "abc.es"];
+      searchQuery = `Noticias última hora polémica política España gobierno oposición ${mode === "batch" ? "actualidad general" : entity} ${topic || ""}`;
+    }
+
+    console.log(`🔎 Buscando: "${searchQuery}" en ${domains.length} fuentes especializadas.`);
 
     const searchResponse = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         api_key: TAVILY_API_KEY,
-        query: `Noticias polémica última hora ${entity} ${module} España ${topic || ""}`,
+        query: searchQuery,
         search_depth: "news",
-        include_domains: ["elpais.com", "elmundo.es", "marca.com", "as.com", "elconfidencial.com"],
-        max_results: 3,
+        include_domains: domains, // <--- AQUI APLICAMOS EL FILTRO DE SEGURIDAD
+        max_results: mode === "batch" ? 7 : 4, // Si es batch, buscamos más noticias
       }),
     });
 
     const searchData = await searchResponse.json();
     const contextNews = searchData.results
       ? searchData.results.map((r: any) => `- ${r.title}: ${r.content}`).join("\n")
-      : "No se encontraron noticias recientes.";
+      : "No hay noticias recientes.";
 
-    console.log("📰 Noticias encontradas:", searchData.results?.length || 0);
-
-    // 2. GENERACIÓN CON GPT (Le damos las noticias masticadas)
+    // 2. PROMPT PARA GPT (EL REDACTOR JEFE)
     const systemPrompt = `
-      Eres un experto redactor de encuestas para la app Quorum.
+      Eres un redactor jefe experto en ${module}.
       
-      INFORMACIÓN DE ÚLTIMA HORA:
+      NOTICIAS DE HOY:
       ${contextNews}
-      
-      OBJETIVO: Generar una pregunta de debate basada en estas noticias.
+
+      OBJETIVO:
+      ${
+        mode === "batch"
+          ? `Genera una lista de preguntas:
+           1. Una pregunta GENERAL sobre la noticia más importante del día.
+           2. Una pregunta ESPECÍFICA para cada uno de estos protagonistas: [${entitiesList ? entitiesList.join(", ") : ""}], PERO SOLO SI hay noticias relacionadas en el texto de arriba. Si no hay polémica sobre ellos hoy, NO inventes la pregunta.`
+          : `Genera una encuesta polémica sobre: ${entity}.`
+      }
+
       REGLAS:
-      1. Entidad: ${entity}.
-      2. Tono: Polémico pero neutral.
-      3. FORMATO JSON ESTRICTO:
+      1. Tono incisivo y de debate actual.
+      2. Si no hay noticias sobre una entidad específica, IGNÓRALA. No inventes.
+      
+      FORMATO JSON:
       {
-        "question": "¿Pregunta?",
-        "options": ["Opción 1", "Opción 2", "Opción 3", "Opción 4"]
+        "results": [
+          { "question": "¿...?", "options": ["...", "...", "...", "..."], "target_entity": "Nombre o 'General'" }
+        ]
       }
     `;
 
+    // Usamos gpt-4o porque entiende mejor las instrucciones complejas de "si no hay noticia, no inventes"
     const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -66,27 +85,20 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [{ role: "system", content: systemPrompt }],
-        temperature: 0.7,
-        response_format: { type: "json_object" }, // Esto garantiza JSON y evita errores de parseo
+        response_format: { type: "json_object" },
       }),
     });
 
     const aiData = await openAiResponse.json();
-    const content = aiData.choices[0].message.content;
-    const result = JSON.parse(content);
+    const result = JSON.parse(aiData.choices[0].message.content);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error: any) {
-    // <--- Aquí está el arreglo del error TS
-    console.error("Error en la función:", error);
-
-    // Arreglo seguro para TypeScript:
     const errorMessage = error instanceof Error ? error.message : String(error);
-
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
