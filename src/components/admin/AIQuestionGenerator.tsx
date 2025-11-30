@@ -234,86 +234,83 @@ export const AIQuestionGenerator = () => {
         </CardContent>
       </Card>
 
-      {/* --- PANEL DERECHO: RESULTADO (CORREGIDO PARA LEGIBILIDAD) --- */}
+      {/* --- PANEL DERECHO: RESULTADO --- */}
       {generatedData ? (
-        <Card className="shadow-lg border-2 border-purple-100 animate-in fade-in slide-in-from-bottom-4 duration-500 bg-white">
-          <CardHeader className="bg-purple-50 pb-4 border-b border-purple-100">
+        <Card className="shadow-lg border-2 border-purple-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <CardHeader className="bg-purple-50/50 pb-4 border-b">
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-lg text-purple-900 font-bold">Borrador de Encuesta</CardTitle>
-                <CardDescription className="text-purple-700">
-                  Puedes editar cualquier texto antes de guardar.
-                </CardDescription>
+                <CardTitle className="text-lg text-purple-900">Borrador de Encuesta</CardTitle>
+                <CardDescription>Puedes editar cualquier texto antes de guardar.</CardDescription>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setGeneratedData(null)}
-                className="text-purple-700 hover:bg-purple-100 hover:text-purple-900"
+                className="text-muted-foreground"
               >
                 <RotateCcw className="w-4 h-4 mr-1" /> Descartar
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6 bg-white">
+          <CardContent className="space-y-6 pt-6">
             <div className="space-y-2">
-              <Label className="text-purple-800 font-bold text-base">Pregunta Generada</Label>
+              <Label className="text-purple-700 font-semibold">Pregunta Generada</Label>
               <Textarea
                 value={generatedData.question}
                 onChange={(e) => setGeneratedData({ ...generatedData, question: e.target.value })}
-                className="font-medium text-lg min-h-[80px] border-2 border-purple-200 focus-visible:ring-purple-500 bg-white text-black shadow-sm"
+                className="font-medium text-lg min-h-[80px] border-purple-200 focus-visible:ring-purple-400"
               />
             </div>
 
-            <div className="space-y-4">
-              <Label className="text-purple-800 font-bold text-base">Opciones de Respuesta</Label>
-              <div className="space-y-3">
-                {generatedData.options.map((opt, idx) => (
-                  <div key={idx} className="flex items-center gap-3">
-                    <span className="flex items-center justify-center w-7 h-7 rounded-full bg-purple-600 text-white text-sm font-bold shadow-sm">
-                      {idx + 1}
-                    </span>
-                    <Input
-                      value={opt}
-                      onChange={(e) => {
-                        const newOpts = [...generatedData.options];
-                        newOpts[idx] = e.target.value;
-                        setGeneratedData({ ...generatedData, options: newOpts });
-                      }}
-                      className="border-2 border-purple-100 focus-visible:ring-purple-500 bg-white text-black shadow-sm font-medium"
-                    />
-                  </div>
-                ))}
-              </div>
+            <div className="space-y-3">
+              <Label className="text-purple-700 font-semibold">Opciones de Respuesta</Label>
+              {generatedData.options.map((opt, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold">
+                    {idx + 1}
+                  </span>
+                  <Input
+                    value={opt}
+                    onChange={(e) => {
+                      const newOpts = [...generatedData.options];
+                      newOpts[idx] = e.target.value;
+                      setGeneratedData({ ...generatedData, options: newOpts });
+                    }}
+                    className="border-purple-100 focus-visible:ring-purple-400"
+                  />
+                </div>
+              ))}
             </div>
 
-            <div className="pt-6 border-t border-gray-200 space-y-2">
-              <Label className="text-gray-700 font-semibold">Fecha de Publicación</Label>
+            <div className="pt-4 border-t space-y-2">
+              <Label>Fecha de Publicación</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-medium border-2 bg-white text-black shadow-sm hover:bg-gray-50",
-                      !weekStartDate && "text-gray-500 border-dashed",
+                      "w-full justify-start text-left font-normal border-dashed border-2",
+                      !weekStartDate && "text-muted-foreground",
                     )}
                   >
-                    <CalendarIcon className={cn("mr-2 h-5 w-5", weekStartDate ? "text-purple-600" : "text-gray-400")} />
+                    <CalendarIcon className="mr-2 h-4 w-4 text-purple-600" />
                     {weekStartDate ? (
-                      <span>{format(weekStartDate, "PPP", { locale: es })}</span>
+                      <span className="font-medium text-foreground">
+                        {format(weekStartDate, "PPP", { locale: es })}
+                      </span>
                     ) : (
                       <span>Selecciona la semana...</span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white border-2 shadow-xl" align="start">
+                <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
                     selected={weekStartDate}
                     onSelect={handleDateSelect}
                     initialFocus
                     locale={es}
-                    className="p-3 rounded-md border"
                   />
                 </PopoverContent>
               </Popover>
@@ -321,22 +318,21 @@ export const AIQuestionGenerator = () => {
 
             <Button
               onClick={handleSave}
-              disabled={saving || !weekStartDate}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold shadow-md h-12 text-base mt-4"
+              disabled={saving}
+              className="w-full bg-green-600 hover:bg-green-700 text-white shadow-sm"
               size="lg"
             >
               {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
-              Aprobar y Publicar Encuesta
+              Aprobar y Publicar
             </Button>
           </CardContent>
         </Card>
       ) : (
         // Estado vacío (placeholder)
-        <div className="hidden lg:flex h-full items-center justify-center border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-12 text-center text-gray-500">
+        <div className="hidden lg:flex h-full items-center justify-center border-2 border-dashed rounded-lg bg-muted/20 p-12 text-center text-muted-foreground">
           <div>
-            <Sparkles className="w-12 h-12 mx-auto mb-4 text-purple-300" />
-            <p className="text-lg font-medium">La propuesta de la IA aparecerá aquí</p>
-            <p className="text-sm mt-1">Rellena el formulario de la izquierda para empezar.</p>
+            <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-20" />
+            <p className="text-lg font-medium opacity-50">La propuesta de la IA aparecerá aquí</p>
           </div>
         </div>
       )}
