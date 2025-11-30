@@ -193,7 +193,7 @@ export const AIQuestionGenerator = () => {
                 <Label>Modelo</Label>
               </div>
               <Select value={aiModel} onValueChange={setAiModel}>
-                <SelectTrigger className="w-[140px] h-8 text-xs bg-white">
+                <SelectTrigger className="w-[140px] h-8 text-xs bg-black">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
