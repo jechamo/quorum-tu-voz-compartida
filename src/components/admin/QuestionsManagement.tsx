@@ -7,13 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, CalendarIcon } from "lucide-react"; // Añadido CalendarIcon
+import { Plus, Trash2, CalendarIcon } from "lucide-react";
 import { getCurrentWeekStart } from "@/lib/dateUtils";
-// Nuevas importaciones para el calendario
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { es } from "date-fns/locale"; // Para que salga en español
+import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 export const QuestionsManagement = () => {
@@ -23,13 +22,11 @@ export const QuestionsManagement = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Form state
   const [questionText, setQuestionText] = useState("");
   const [module, setModule] = useState<"politica" | "futbol">("politica");
   const [scope, setScope] = useState<"general" | "specific">("general");
   const [selectedParty, setSelectedParty] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
-  // Estado modificado para manejar objeto Date
   const [weekStartDate, setWeekStartDate] = useState<Date | undefined>(new Date(getCurrentWeekStart()));
   const [isMandatory, setIsMandatory] = useState(false);
   const [options, setOptions] = useState<string[]>(["", ""]);
@@ -41,6 +38,7 @@ export const QuestionsManagement = () => {
   }, []);
 
   const loadQuestions = async () => {
+    const today = new Date().toISOString().split("T")[0];
     const { data } = await supabase
       .from("questions")
       .select("*, parties(name), teams(name), answer_options(*)")
@@ -80,7 +78,6 @@ export const QuestionsManagement = () => {
     setOptions(newOptions);
   };
 
-  // Función auxiliar para ajustar al lunes
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
     const dayOfWeek = date.getDay();
@@ -140,7 +137,6 @@ export const QuestionsManagement = () => {
 
     setLoading(true);
     try {
-      // Ajustar zona horaria para enviar la fecha correcta (YYYY-MM-DD)
       const formattedDate = format(weekStartDate, "yyyy-MM-dd");
 
       const questionData: any = {
@@ -177,7 +173,6 @@ export const QuestionsManagement = () => {
         description: "La pregunta ha sido creada correctamente",
       });
 
-      // Reset form
       setQuestionText("");
       setScope("general");
       setSelectedParty("");
@@ -226,7 +221,8 @@ export const QuestionsManagement = () => {
         <h3 className="font-display font-semibold text-lg mb-4">Crear Nueva Pregunta</h3>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          {/* RESPONSIVE: 1 columna en móvil, 2 en PC */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="module">Módulo</Label>
               <Select value={module} onValueChange={(v: any) => setModule(v)}>
@@ -247,12 +243,16 @@ export const QuestionsManagement = () => {
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full justify-start text-left font-normal truncate", // Truncate para textos largos
                       !weekStartDate && "text-muted-foreground",
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {weekStartDate ? format(weekStartDate, "PPP", { locale: es }) : <span>Selecciona fecha</span>}
+                    <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                    {weekStartDate ? (
+                      <span className="truncate">{format(weekStartDate, "PPP", { locale: es })}</span>
+                    ) : (
+                      <span>Selecciona fecha</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -271,8 +271,6 @@ export const QuestionsManagement = () => {
             </div>
           </div>
 
-          {/* ... El resto del formulario sigue igual ... */}
-
           <div>
             <Label htmlFor="question">Pregunta</Label>
             <Input
@@ -283,7 +281,8 @@ export const QuestionsManagement = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {/* RESPONSIVE: 1 columna en móvil, 2 en PC */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="scope">Tipo</Label>
               <Select value={scope} onValueChange={(v: any) => setScope(v)}>
