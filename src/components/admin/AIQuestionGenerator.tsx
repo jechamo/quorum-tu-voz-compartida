@@ -256,11 +256,10 @@ export const AIQuestionGenerator = () => {
           <CardContent className="space-y-6 pt-6">
             <div className="space-y-2">
               <Label className="text-purple-700 font-semibold">Pregunta Generada</Label>
-              {/* CAMBIO AQUÍ: Añadido bg-white/90 y text-gray-900 para contraste */}
               <Textarea
                 value={generatedData.question}
                 onChange={(e) => setGeneratedData({ ...generatedData, question: e.target.value })}
-                className="font-medium text-lg min-h-[80px] border-purple-200 focus-visible:ring-purple-400 bg-white/90 text-gray-900"
+                className="font-medium text-lg min-h-[80px] border-purple-200 focus-visible:ring-purple-400"
               />
             </div>
 
@@ -271,7 +270,6 @@ export const AIQuestionGenerator = () => {
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold">
                     {idx + 1}
                   </span>
-                  {/* CAMBIO AQUÍ: Añadido bg-white/90 y text-gray-900 para contraste */}
                   <Input
                     value={opt}
                     onChange={(e) => {
@@ -279,7 +277,7 @@ export const AIQuestionGenerator = () => {
                       newOpts[idx] = e.target.value;
                       setGeneratedData({ ...generatedData, options: newOpts });
                     }}
-                    className="border-purple-100 focus-visible:ring-purple-400 bg-white/90 text-gray-900 font-medium"
+                    className="border-purple-100 focus-visible:ring-purple-400"
                   />
                 </div>
               ))}
@@ -289,17 +287,18 @@ export const AIQuestionGenerator = () => {
               <Label>Fecha de Publicación</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  {/* CAMBIO AQUÍ: Añadido bg-white/90 y text-gray-900 para el botón de fecha también */}
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal border-dashed border-2 bg-white/90 text-gray-900",
+                      "w-full justify-start text-left font-normal border-dashed border-2",
                       !weekStartDate && "text-muted-foreground",
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4 text-purple-600" />
                     {weekStartDate ? (
-                      <span className="font-medium text-gray-900">{format(weekStartDate, "PPP", { locale: es })}</span>
+                      <span className="font-medium text-foreground">
+                        {format(weekStartDate, "PPP", { locale: es })}
+                      </span>
                     ) : (
                       <span>Selecciona la semana...</span>
                     )}
