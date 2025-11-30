@@ -1,124 +1,82 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+// Cabeceras para permitir que tu web llame a esta función (CORS)
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  // 1. Si es una petición "OPTIONS" (el navegador preguntando si puede pasar), le decimos que sí.
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
 
   try {
-    const { topic, entity, module, model, mode, entitiesList } = await req.json();
-
-    // Recuperar claves
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY");
-
-    if (!OPENAI_API_KEY || !TAVILY_API_KEY) {
-      throw new Error("Faltan claves API (OpenAI o Tavily)");
+    // 2. Obtenemos los datos que nos envía el Frontend
+    const { topic, entity, module } = await req.json();
+    
+    // 3. Recuperamos la clave secreta de OpenAI (que configuraremos en el siguiente paso)
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      throw new Error('Falta la clave API de OpenAI en Supabase');
     }
 
-    // 1. FASE DE INVESTIGACIÓN (Búsqueda en Internet)
-    // Construimos la query de búsqueda
-    let searchQuery = "";
-    if (mode === "batch") {
-      searchQuery = `Noticias polémicas última hora ${module} España actualidad debate`;
-    } else {
-      searchQuery = `Noticias última hora polémica ${entity} ${module} España ${topic || ""}`;
-    }
+    console.log(`Generando pregunta sobre: ${topic} para ${entity} (${module})`);
 
-    console.log(`🔎 Buscando en internet: "${searchQuery}"...`);
-
-    const searchResponse = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        api_key: TAVILY_API_KEY,
-        query: searchQuery,
-        search_depth: "news", // Prioriza noticias recientes
-        include_domains: ["elpais.com", "elmundo.es", "marca.com", "as.com", "elconfidencial.com"], // Fuentes fiables
-        max_results: 5,
-      }),
-    });
-
-    const searchData = await searchResponse.json();
-    const contextNews = searchData.results.map((r: any) => `- ${r.title}: ${r.content}`).join("\n");
-
-    console.log("📰 Noticias encontradas:", searchData.results.length);
-
-    // 2. FASE DE GENERACIÓN (GPT)
+    // 4. Preparamos el "Prompt" (las instrucciones para la IA)
     const systemPrompt = `
-      Actúa como un redactor jefe de un medio digital deportivo/político. Tienes acceso a noticias de última hora.
+      Eres un experto redactor de encuestas de opinión para una app llamada Quorum.
+      Tu objetivo es generar una pregunta de debate interesante y polémica pero neutral.
       
-      TU MISIÓN:
-      Generar encuestas de debate MUY ACTUALES y POLÉMICAS basadas en las noticias proporcionadas.
-      
-      REGLAS DE ESTILO:
-      - Tono: Periodístico pero incisivo. Busca la controversia.
-      - Preguntas: Nada de "¿Qué opinas?". Usa "¿Es un error...?", "¿Debería dimitir...?", "¿Robo o acierto?".
-      - Opciones: 4 opciones cortas (máx 5 palabras). Deben cubrir: [Muy a favor], [Muy en contra], [Postura matizada], [Otra visión].
-      
-      NOTICIAS DE HOY (Contexto Real):
-      ${contextNews}
-      
-      FORMATO JSON OBLIGATORIO:
-      Devuelve un objeto con un array "results":
+      Reglas:
+      1. La pregunta debe ser sobre: ${entity} (Módulo: ${module}).
+      2. Contexto/Noticia: "${topic}".
+      3. Genera 4 opciones de respuesta cortas y claras.
+      4. FORMATO JSON ESTRICTO:
       {
-        "results": [
-          { 
-            "question": "Texto de la pregunta", 
-            "options": ["Opción A", "Opción B", "Opción C", "Opción D"],
-            "target_entity": "Nombre de la entidad (o 'General')"
-          }
-        ]
+        "question": "¿Texto de la pregunta?",
+        "options": ["Opción 1", "Opción 2", "Opción 3", "Opción 4"]
       }
+      5. Idioma: Español de España.
+      6. No añadas nada más fuera del JSON.
     `;
 
-    let userPrompt = "";
-    if (mode === "batch") {
-      userPrompt = `
-        Genera una batería de preguntas (BATCH):
-        1. Una pregunta GENERAL sobre la noticia más importante de hoy en ${module}.
-        2. Una pregunta específica para cada uno de estos protagonistas (si hay noticias sobre ellos en el contexto): ${entitiesList.join(", ")}.
-        Si no hay noticias relevantes de alguno, sáltalo.
-      `;
-    } else {
-      userPrompt = `Genera una encuesta específica y picante sobre: ${entity}. Contexto extra: ${topic}`;
-    }
-
-    // Usamos el modelo que pidió el usuario (gpt-5-mini o el que sea)
-    const aiModel = model || "gpt-4o-mini";
-
-    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    // 5. Llamamos a OpenAI (GPT-4o-mini es rápido y barato)
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: aiModel,
+        model: 'gpt-4o-mini',
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: 'system', content: systemPrompt }
         ],
-        temperature: 0.8, // Creatividad alta para polémica
-        response_format: { type: "json_object" }, // Forzar JSON
+        temperature: 0.7, // Creatividad media
       }),
     });
 
-    const aiJson = await openAiResponse.json();
-    const content = aiJson.choices[0].message.content;
+    const aiData = await response.json();
+    
+    // 6. Extraemos y limpiamos la respuesta
+    let content = aiData.choices[0].message.content;
+    // A veces la IA pone ```json ... ```, lo quitamos por si acaso
+    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    
     const result = JSON.parse(content);
 
+    // 7. Devolvemos la pregunta limpia al Frontend
     return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
-    console.error(error);
+    console.error("Error en la función:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
