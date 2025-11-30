@@ -22,6 +22,7 @@ interface GeneratedQuestion {
   options: string[];
   target_entity_id?: string;
   target_entity_name?: string;
+  publicationDate?: Date; // Nueva propiedad: Fecha individual por pregunta
 }
 
 export const AIQuestionGenerator = () => {
@@ -30,17 +31,17 @@ export const AIQuestionGenerator = () => {
 
   // -- CONFIGURACIÓN --
   const [module, setModule] = useState<"politica" | "futbol">("politica");
-  // AQUÍ ESTÁ TU PREFERENCIA: Por defecto gpt-4o-mini
   const [aiModel, setAiModel] = useState("gpt-4o-mini");
   const [isBatchMode, setIsBatchMode] = useState(false);
 
   const [parties, setParties] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
 
-  // Inputs
+  // Inputs Globales (Valores por defecto)
   const [selectedEntityId, setSelectedEntityId] = useState("");
   const [topic, setTopic] = useState("");
-  const [weekStartDate, setWeekStartDate] = useState<Date | undefined>(new Date(getCurrentWeekStart()));
+  // Esta fecha ahora sirve como "Valor por defecto" para las nuevas generaciones
+  const [defaultWeekStartDate, setDefaultWeekStartDate] = useState<Date | undefined>(new Date(getCurrentWeekStart()));
 
   // Resultados (Lista)
   const [results, setResults] = useState<GeneratedQuestion[]>([]);
@@ -62,6 +63,8 @@ export const AIQuestionGenerator = () => {
     }
 
     setLoading(true);
+    // Nota: Ya no limpiamos setResults([]) obligatoriamente, por si quieres acumular,
+    // pero para evitar confusión visual, lo mantenemos limpio por ahora.
     setResults([]);
 
     try {
@@ -69,7 +72,7 @@ export const AIQuestionGenerator = () => {
       let payload: any = {
         topic: topic.trim(),
         module,
-        model: aiModel, // Enviamos el modelo seleccionado (gpt-4o-mini por defecto)
+        model: aiModel,
         mode: isBatchMode ? "batch" : "single",
       };
 
@@ -79,7 +82,6 @@ export const AIQuestionGenerator = () => {
         payload.entity = entityList.find((e) => e.id === selectedEntityId)?.name || "Entidad";
       }
 
-      // Llamada al Backend (que ya soporta búsqueda en Tavily y GPT-5)
       const { data, error } = await supabase.functions.invoke("generate-ai-question", { body: payload });
 
       if (error) throw error;
@@ -108,6 +110,8 @@ export const AIQuestionGenerator = () => {
             options: item.options,
             target_entity_id: matchedId,
             target_entity_name: matchedName || (isBatchMode ? "General" : payload.entity),
+            // Asignamos la fecha por defecto seleccionada a la izquierda
+            publicationDate: defaultWeekStartDate || new Date(),
           };
         });
         setResults(processed);
@@ -115,19 +119,19 @@ export const AIQuestionGenerator = () => {
       }
     } catch (error: any) {
       console.error("Error:", error);
-      toast({
-        title: "Error",
-        description: "Fallo al conectar con la IA. ¿Tienes la API de Tavily configurada?",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Fallo al conectar con la IA.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handlePublish = async (q: GeneratedQuestion) => {
-    if (!weekStartDate) {
-      toast({ title: "Fecha requerida", description: "Selecciona una fecha arriba.", variant: "destructive" });
+    if (!q.publicationDate) {
+      toast({
+        title: "Fecha requerida",
+        description: "Selecciona una fecha para esta pregunta.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -136,7 +140,8 @@ export const AIQuestionGenerator = () => {
         text: q.question,
         module,
         scope: q.target_entity_id ? "specific" : "general",
-        week_start_date: format(weekStartDate, "yyyy-MM-dd"),
+        // Usamos la fecha ESPECÍFICA de esta tarjeta
+        week_start_date: format(q.publicationDate, "yyyy-MM-dd"),
         is_mandatory: false,
       };
 
@@ -151,14 +156,19 @@ export const AIQuestionGenerator = () => {
       const oPayload = q.options.map((t, i) => ({ question_id: qData.id, text: t, option_order: i }));
       await supabase.from("answer_options").insert(oPayload);
 
-      toast({ title: "Publicado", description: "Pregunta enviada a la App." });
+      toast({
+        title: "Publicado",
+        description: `Programada para el ${format(q.publicationDate, "d 'de' MMMM", { locale: es })}.`,
+      });
+
       setResults((prev) => prev.filter((i) => i.id !== q.id));
     } catch (e: any) {
       toast({ title: "Error", description: e.message, variant: "destructive" });
     }
   };
 
-  // Helpers de edición
+  // --- HELPERS DE EDICIÓN LOCAL ---
+
   const updateText = (id: string, field: "question" | "option", val: string, optIdx?: number) => {
     setResults((prev) =>
       prev.map((item) => {
@@ -171,18 +181,30 @@ export const AIQuestionGenerator = () => {
     );
   };
 
-  const handleDateSelect = (date: Date | undefined) => {
+  // Función para actualizar la fecha de UNA pregunta específica
+  const updateQuestionDate = (id: string, date: Date | undefined) => {
+    if (!date) return;
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day; // Ajustar al lunes
+    d.setDate(d.getDate() + diff);
+
+    setResults((prev) => prev.map((item) => (item.id === id ? { ...item, publicationDate: d } : item)));
+  };
+
+  // Función para el selector global (izquierda)
+  const handleDefaultDateSelect = (date: Date | undefined) => {
     if (!date) return;
     const d = new Date(date);
     const day = d.getDay();
     const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
-    setWeekStartDate(d);
+    setDefaultWeekStartDate(d);
   };
 
   return (
     <div className="grid gap-6 lg:grid-cols-12">
-      {/* PANEL IZQUIERDO */}
+      {/* PANEL IZQUIERDO: CONFIGURACIÓN */}
       <div className="lg:col-span-4 space-y-4">
         <Card className="border-l-4 border-l-primary shadow-md">
           <CardHeader>
@@ -193,19 +215,20 @@ export const AIQuestionGenerator = () => {
             <CardDescription>Busca noticias reales y genera debate.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* SELECTOR DE MODELO */}
+            {/* Modelo */}
             <div className="flex items-center justify-between bg-muted/40 p-2 rounded border">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-500" />
                 <Label>Modelo</Label>
               </div>
               <Select value={aiModel} onValueChange={setAiModel}>
-                <SelectTrigger className="w-[160px] h-8 text-xs bg-black">
+                <SelectTrigger className="w-[160px] h-8 text-xs bg-white">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gpt-4o-mini">GPT-4o Mini (Default)</SelectItem>
+                  <SelectItem value="gpt-4o-mini">GPT-4o Mini (Rápido)</SelectItem>
                   <SelectItem value="gpt-5-mini">GPT-5 Mini (Preview)</SelectItem>
+                  <SelectItem value="gpt-4o">GPT-4o (Experto)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -271,30 +294,37 @@ export const AIQuestionGenerator = () => {
             </div>
 
             <div className="space-y-2 pt-2 border-t">
-              <Label>Fecha Publicación</Label>
+              <Label className="text-muted-foreground text-xs uppercase font-bold">Fecha por defecto</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
                     className={cn(
                       "w-full justify-start text-left font-normal",
-                      !weekStartDate && "text-muted-foreground",
+                      !defaultWeekStartDate && "text-muted-foreground",
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {weekStartDate ? format(weekStartDate, "PPP", { locale: es }) : <span>Selecciona fecha</span>}
+                    {defaultWeekStartDate ? (
+                      format(defaultWeekStartDate, "PPP", { locale: es })
+                    ) : (
+                      <span>Selecciona fecha base</span>
+                    )}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={weekStartDate}
-                    onSelect={handleDateSelect}
+                    selected={defaultWeekStartDate}
+                    onSelect={handleDefaultDateSelect}
                     initialFocus
                     locale={es}
                   />
                 </PopoverContent>
               </Popover>
+              <p className="text-xs text-muted-foreground">
+                Esta fecha se asignará a las nuevas preguntas generadas (podrás cambiarla luego a la derecha).
+              </p>
             </div>
 
             <Button
@@ -322,31 +352,21 @@ export const AIQuestionGenerator = () => {
 
         <div className="grid gap-6">
           {results.map((item) => (
-            <Card key={item.id} className="border-2 border-gray-800 shadow-lg bg-card overflow-hidden">
-              {/* CABECERA: GRIS OSCURO */}
+            <Card key={item.id} className="border-2 border-gray-800 shadow-lg bg-card overflow-visible">
               <CardHeader className="bg-gray-800 py-3 px-4 flex flex-row items-center justify-between space-y-0 border-b border-gray-700">
                 <div className="flex items-center gap-3">
                   <span className="px-2 py-1 rounded bg-blue-900/50 text-blue-100 text-xs font-bold border border-blue-800 uppercase tracking-wide">
                     {item.target_entity_name}
                   </span>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setResults((p) => p.filter((i) => i.id !== item.id))}
-                    className="text-gray-400 hover:text-red-400 hover:bg-gray-700 h-8"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={() => handlePublish(item)}
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700 text-white font-semibold h-8 shadow-sm"
-                  >
-                    <Save className="w-3 h-3 mr-1.5" /> Publicar
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setResults((p) => p.filter((i) => i.id !== item.id))}
+                  className="text-gray-400 hover:text-red-400 hover:bg-gray-700 h-8"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </CardHeader>
 
               <CardContent className="p-5 bg-card space-y-5">
@@ -354,7 +374,6 @@ export const AIQuestionGenerator = () => {
                   <Label className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                     Pregunta
                   </Label>
-                  {/* TEXTAREA: FONDO CLARO PARA LEGIBILIDAD SOBRE CARD OSCURA */}
                   <Textarea
                     value={item.question}
                     onChange={(e) => updateText(item.id, "question", e.target.value)}
@@ -372,7 +391,6 @@ export const AIQuestionGenerator = () => {
                         <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-700 text-gray-200 text-xs font-bold border border-gray-600">
                           {idx + 1}
                         </span>
-                        {/* INPUT: FONDO CLARO PARA LEGIBILIDAD */}
                         <Input
                           value={opt}
                           onChange={(e) => updateText(item.id, "option", e.target.value, idx)}
@@ -381,6 +399,49 @@ export const AIQuestionGenerator = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* --- FOOTER DE LA TARJETA: FECHA INDIVIDUAL Y PUBLICAR --- */}
+                <div className="pt-4 mt-2 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-end sm:items-center gap-4">
+                  <div className="flex flex-col gap-1 w-full sm:w-auto">
+                    <Label className="text-xs text-muted-foreground">Fecha de publicación (Lunes)</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          size="sm"
+                          className={cn(
+                            "justify-start text-left font-medium border-gray-700 bg-gray-900/50 text-gray-100 h-9 min-w-[200px]",
+                            !item.publicationDate && "text-muted-foreground",
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4 text-purple-500" />
+                          {item.publicationDate ? (
+                            format(item.publicationDate, "PPP", { locale: es })
+                          ) : (
+                            <span>Selecciona fecha...</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 bg-gray-900 border-gray-700" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={item.publicationDate}
+                          onSelect={(d) => updateQuestionDate(item.id, d)}
+                          initialFocus
+                          locale={es}
+                          className="bg-gray-950 text-gray-100"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <Button
+                    onClick={() => handlePublish(item)}
+                    className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-md w-full sm:w-auto"
+                  >
+                    <Save className="w-4 h-4 mr-2" /> Publicar
+                  </Button>
                 </div>
               </CardContent>
             </Card>
