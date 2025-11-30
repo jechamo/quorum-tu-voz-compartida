@@ -236,40 +236,48 @@ export const AIQuestionGenerator = () => {
 
       {/* --- PANEL DERECHO: RESULTADO --- */}
       {generatedData ? (
-        <Card className="shadow-lg border-2 border-purple-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <CardHeader className="bg-purple-50/50 pb-4 border-b">
+        // Quitamos bg-white para volver al fondo oscuro por defecto
+        <Card className="shadow-lg border-2 border-gray-800 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* CABECERA: Gris oscuro (bg-gray-800) y texto claro */}
+          <CardHeader className="bg-gray-800/50 pb-4 border-b border-gray-700">
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle className="text-lg text-purple-900">Borrador de Encuesta</CardTitle>
-                <CardDescription>Puedes editar cualquier texto antes de guardar.</CardDescription>
+                <CardTitle className="text-lg text-gray-100 font-bold">Borrador de Encuesta</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Puedes editar cualquier texto antes de guardar.
+                </CardDescription>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setGeneratedData(null)}
-                className="text-muted-foreground"
+                className="text-gray-400 hover:text-white hover:bg-gray-700"
               >
                 <RotateCcw className="w-4 h-4 mr-1" /> Descartar
               </Button>
             </div>
           </CardHeader>
+
+          {/* CONTENIDO: Fondo oscuro y textos legibles */}
           <CardContent className="space-y-6 pt-6">
             <div className="space-y-2">
-              <Label className="text-purple-700 font-semibold">Pregunta Generada</Label>
+              <Label className="text-purple-400 font-semibold text-base">Pregunta Generada</Label>
+              {/* Textarea con fondo oscuro y letra clara */}
               <Textarea
                 value={generatedData.question}
                 onChange={(e) => setGeneratedData({ ...generatedData, question: e.target.value })}
-                className="font-medium text-lg min-h-[80px] border-purple-200 focus-visible:ring-purple-400"
+                className="font-medium text-lg min-h-[80px] border-gray-700 focus-visible:ring-purple-500 bg-gray-900/50 text-gray-100 shadow-sm"
               />
             </div>
 
             <div className="space-y-3">
-              <Label className="text-purple-700 font-semibold">Opciones de Respuesta</Label>
+              <Label className="text-purple-400 font-semibold text-base">Opciones de Respuesta</Label>
               {generatedData.options.map((opt, idx) => (
                 <div key={idx} className="flex items-center gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 text-xs font-bold">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-full bg-purple-900 text-purple-100 text-sm font-bold shadow-sm border border-purple-700">
                     {idx + 1}
                   </span>
+                  {/* Input con fondo oscuro y letra clara */}
                   <Input
                     value={opt}
                     onChange={(e) => {
@@ -277,40 +285,42 @@ export const AIQuestionGenerator = () => {
                       newOpts[idx] = e.target.value;
                       setGeneratedData({ ...generatedData, options: newOpts });
                     }}
-                    className="border-purple-100 focus-visible:ring-purple-400"
+                    className="border-gray-700 focus-visible:ring-purple-500 bg-gray-900/50 text-gray-100 shadow-sm font-medium"
                   />
                 </div>
               ))}
             </div>
 
-            <div className="pt-4 border-t space-y-2">
-              <Label>Fecha de Publicación</Label>
+            <div className="pt-4 border-t border-gray-800 space-y-2">
+              <Label className="text-gray-400 font-semibold">Fecha de Publicación</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal border-dashed border-2",
-                      !weekStartDate && "text-muted-foreground",
+                      "w-full justify-start text-left font-medium border-2 border-gray-700 bg-gray-900/50 text-gray-100 shadow-sm hover:bg-gray-800 hover:text-white",
+                      !weekStartDate && "text-gray-500 border-dashed",
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 text-purple-600" />
+                    <CalendarIcon className="mr-2 h-5 w-5 text-purple-500" />
                     {weekStartDate ? (
-                      <span className="font-medium text-foreground">
-                        {format(weekStartDate, "PPP", { locale: es })}
-                      </span>
+                      <span className="font-medium">{format(weekStartDate, "PPP", { locale: es })}</span>
                     ) : (
                       <span>Selecciona la semana...</span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent
+                  className="w-auto p-0 bg-gray-900 border-gray-700 text-gray-100 shadow-xl"
+                  align="start"
+                >
                   <Calendar
                     mode="single"
                     selected={weekStartDate}
                     onSelect={handleDateSelect}
                     initialFocus
                     locale={es}
+                    className="p-3 rounded-md border border-gray-800 bg-gray-950 text-white"
                   />
                 </PopoverContent>
               </Popover>
@@ -319,7 +329,7 @@ export const AIQuestionGenerator = () => {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="w-full bg-green-600 hover:bg-green-700 text-white shadow-sm"
+              className="w-full bg-green-600 hover:bg-green-700 text-white shadow-md h-12 text-base mt-2 font-bold"
               size="lg"
             >
               {saving ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
@@ -328,8 +338,8 @@ export const AIQuestionGenerator = () => {
           </CardContent>
         </Card>
       ) : (
-        // Estado vacío (placeholder)
-        <div className="hidden lg:flex h-full items-center justify-center border-2 border-dashed rounded-lg bg-muted/20 p-12 text-center text-muted-foreground">
+        // Estado vacío (placeholder oscuro)
+        <div className="hidden lg:flex h-full items-center justify-center border-2 border-dashed border-gray-800 rounded-lg bg-gray-900/20 p-12 text-center text-gray-500">
           <div>
             <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-20" />
             <p className="text-lg font-medium opacity-50">La propuesta de la IA aparecerá aquí</p>
