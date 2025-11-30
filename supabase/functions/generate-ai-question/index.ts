@@ -1,49 +1,65 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-// Cabeceras para permitir que tu web llame a esta función (CORS)
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
-  // 1. Si es una petición "OPTIONS" (el navegador preguntando si puede pasar), le decimos que sí.
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    // 2. Obtenemos los datos que nos envía el Frontend
     const { topic, entity, module } = await req.json();
 
-    // 3. Recuperamos la clave secreta de OpenAI (que configuraremos en el siguiente paso)
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("Falta la clave API OpenAI en Supabase");
-    }
+    const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY"); // <--- Necesitas esto
 
-    console.log(`Generando pregunta sobre: ${topic} para ${entity} (${module})`);
+    if (!OPENAI_API_KEY) throw new Error("Falta OPENAI_API_KEY");
+    if (!TAVILY_API_KEY) throw new Error("Falta TAVILY_API_KEY para buscar noticias");
 
-    // 4. Preparamos el "Prompt" (las instrucciones para la IA)
+    // 1. BÚSQUEDA DE NOTICIAS REALES (Esto sustituye al web_search)
+    console.log(`🔎 Buscando noticias sobre: ${entity} ${topic || ""}`);
+
+    const searchResponse = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: TAVILY_API_KEY,
+        query: `Noticias polémica última hora ${entity} ${module} España ${topic || ""}`,
+        search_depth: "news",
+        include_domains: ["elpais.com", "elmundo.es", "marca.com", "as.com", "elconfidencial.com"],
+        max_results: 3,
+      }),
+    });
+
+    const searchData = await searchResponse.json();
+    const contextNews = searchData.results
+      ? searchData.results.map((r: any) => `- ${r.title}: ${r.content}`).join("\n")
+      : "No se encontraron noticias recientes.";
+
+    console.log("📰 Noticias encontradas:", searchData.results?.length || 0);
+
+    // 2. GENERACIÓN CON GPT (Le damos las noticias masticadas)
     const systemPrompt = `
-      Eres un experto redactor de encuestas de opinión para una app llamada Quorum.
-      Tu objetivo es generar una pregunta de debate interesante y polémica pero neutral.
+      Eres un experto redactor de encuestas para la app Quorum.
       
-      Reglas:
-      1. La pregunta debe ser sobre: ${entity} (Módulo: ${module}).
-      2. Contexto/Noticia: "${topic}".
-      3. Genera 4 opciones de respuesta cortas y claras.
-      4. FORMATO JSON ESTRICTO:
+      INFORMACIÓN DE ÚLTIMA HORA:
+      ${contextNews}
+      
+      OBJETIVO: Generar una pregunta de debate basada en estas noticias.
+      REGLAS:
+      1. Entidad: ${entity}.
+      2. Tono: Polémico pero neutral.
+      3. FORMATO JSON ESTRICTO:
       {
-        "question": "¿Texto de la pregunta?",
+        "question": "¿Pregunta?",
         "options": ["Opción 1", "Opción 2", "Opción 3", "Opción 4"]
       }
-      5. Idioma: Español de España.
-      6. No añadas nada más fuera del JSON.
     `;
 
-    // 5. Llamamos a OpenAI (GPT-4o-mini es rápido y barato)
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
@@ -51,31 +67,27 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        tools: [{ type: "web_search" }],
         messages: [{ role: "system", content: systemPrompt }],
-        temperature: 0.7, // Creatividad media
+        temperature: 0.7,
+        response_format: { type: "json_object" }, // Esto garantiza JSON y evita errores de parseo
       }),
     });
 
-    const aiData = await response.json();
-
-    // 6. Extraemos y limpiamos la respuesta
-    let content = aiData.choices[0].message.content;
-    // A veces la IA pone ```json ... ```, lo quitamos por si acaso
-    content = content
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
+    const aiData = await openAiResponse.json();
+    const content = aiData.choices[0].message.content;
     const result = JSON.parse(content);
 
-    // 7. Devolvemos la pregunta limpia al Frontend
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // <--- Aquí está el arreglo del error TS
+    console.error("Error en la función:", error);
+
+    // Arreglo seguro para TypeScript:
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: error.message }), {
+
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
