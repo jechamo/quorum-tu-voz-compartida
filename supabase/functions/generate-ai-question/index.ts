@@ -116,7 +116,7 @@ async function tavilySearch(
   let body: Record<string, unknown> = {
     api_key: TAVILY_API_KEY,
     query,
-    topic: "news",
+    topic: "general",
     search_depth: "basic",
     max_results: maxResults,
     time_range: "week", // <--- Última semana
