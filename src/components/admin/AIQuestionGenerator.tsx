@@ -206,7 +206,6 @@ export const AIQuestionGenerator = () => {
                 <SelectContent>
                   <SelectItem value="gpt-4o-mini">GPT-4o Mini (Default)</SelectItem>
                   <SelectItem value="gpt-5-mini">GPT-5 Mini (Preview)</SelectItem>
-                  <SelectItem value="gpt-4o">GPT-4o (Experto)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
