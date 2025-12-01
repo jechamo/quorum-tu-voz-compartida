@@ -54,7 +54,7 @@ const TEAM_LOGOS: Record<string, string> = {
     "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/512px-FC_Barcelona_%28crest%29.svg.png",
   "Real Madrid": "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/512px-Real_Madrid_CF.svg.png",
   "Atlético de Madrid":
-    "https://upload.wikimedia.org/wikipedia/en/thumb/f/f4/Atletico_Madrid_2017_logo.svg/512px-Atletico_Madrid_2017_logo.svg.png",
+    "https://upload.wikimedia.org/wikinews/en/thumb/c/c1/Atletico_Madrid_logo.svg/274px-Atletico_Madrid_logo.svg.png",
   "Athletic Club":
     "https://upload.wikimedia.org/wikipedia/en/thumb/9/98/Club_Athletic_Bilbao_logo.svg/512px-Club_Athletic_Bilbao_logo.svg.png",
   "Real Betis":
