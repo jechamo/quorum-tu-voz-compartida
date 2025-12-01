@@ -76,7 +76,8 @@ const TEAM_LOGOS: Record<string, string> = {
     "https://upload.wikimedia.org/wikipedia/en/thumb/1/1b/Rayo_Vallecano_logo.svg/512px-Rayo_Vallecano_logo.svg.png",
   "Celta de Vigo":
     "https://upload.wikimedia.org/wikipedia/en/thumb/1/12/RC_Celta_de_Vigo_logo.svg/512px-RC_Celta_de_Vigo_logo.svg.png",
-  "Deportivo Alavés": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Getafe_CF_Logo.png",
+  "Deportivo Alavés":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/f/f8/Deportivo_Alaves_logo_%282020%29.svg/300px-Deportivo_Alaves_logo_%282020%29.svg.png",
   "Girona FC": "https://upload.wikimedia.org/wikipedia/en/thumb/9/90/Girona_FC_Crest.svg/512px-Girona_FC_Crest.svg.png",
   "UD Las Palmas":
     "https://upload.wikimedia.org/wikipedia/en/thumb/7/76/UD_Las_Palmas_logo.svg/512px-UD_Las_Palmas_logo.svg.png",
