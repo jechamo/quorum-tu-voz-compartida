@@ -64,23 +64,22 @@ const TEAM_LOGOS: Record<string, string> = {
   "Real Sociedad":
     "https://upload.wikimedia.org/wikipedia/en/thumb/f/f1/Real_Sociedad_logo.svg/512px-Real_Sociedad_logo.svg.png",
   "Villarreal CF":
-    "https://upload.wikimedia.org/wikipedia/en/thumb/7/70/Villarreal_CF_logo.svg/512px-Villarreal_CF_logo.svg.png",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Escudo_de_Vila-Real.svg/960px-Escudo_de_Vila-Real.svg.png",
   "Valencia CF": "https://upload.wikimedia.org/wikipedia/en/thumb/c/ce/Valenciacf.svg/512px-Valenciacf.svg.png",
   "RCD Espanyol":
     "https://upload.wikimedia.org/wikipedia/en/thumb/d/d6/Rcd_espanyol_logo.svg/512px-Rcd_espanyol_logo.svg.png",
-  "Getafe CF": "https://upload.wikimedia.org/wikipedia/en/thumb/4/45/Getafe_CF_logo.svg/512px-Getafe_CF_logo.svg.png",
-  "RCD Mallorca":
-    "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/RCD_Mallorca_logo.svg/512px-RCD_Mallorca_logo.svg.png",
+  "Getafe CF": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Getafe_CF_Logo.png",
+  "RCD Mallorca": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Rcd_mallorca.svg/362px-Rcd_mallorca.svg.png",
   "CA Osasuna": "https://upload.wikimedia.org/wikipedia/en/thumb/d/db/Osasuna_logo.svg/512px-Osasuna_logo.svg.png",
-  "Rayo Vallecano":
-    "https://upload.wikimedia.org/wikipedia/en/thumb/1/1b/Rayo_Vallecano_logo.svg/512px-Rayo_Vallecano_logo.svg.png",
+  "Rayo Vallecano": "https://upload.wikimedia.org/wikipedia/an/c/cc/Rayo_Vallecano_logo.svg.png",
   "Celta de Vigo":
     "https://upload.wikimedia.org/wikipedia/en/thumb/1/12/RC_Celta_de_Vigo_logo.svg/512px-RC_Celta_de_Vigo_logo.svg.png",
   "Deportivo Alavés":
     "https://upload.wikimedia.org/wikipedia/en/thumb/f/f8/Deportivo_Alaves_logo_%282020%29.svg/300px-Deportivo_Alaves_logo_%282020%29.svg.png",
-  "Girona FC": "https://upload.wikimedia.org/wikipedia/en/thumb/9/90/Girona_FC_Crest.svg/512px-Girona_FC_Crest.svg.png",
+  "Girona FC":
+    "https://upload.wikimedia.org/wikipedia/ca/thumb/a/a5/For_article_Girona_FC.svg.png/600px-For_article_Girona_FC.svg.png",
   "UD Las Palmas":
-    "https://upload.wikimedia.org/wikipedia/en/thumb/7/76/UD_Las_Palmas_logo.svg/512px-UD_Las_Palmas_logo.svg.png",
+    "https://upload.wikimedia.org/wikipedia/sco/thumb/2/20/UD_Las_Palmas_logo.svg/152px-UD_Las_Palmas_logo.svg.png",
   "CD Leganés":
     "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Escudo_de_Legan%C3%A9s_%28Madrid%29.svg/500px-Escudo_de_Legan%C3%A9s_%28Madrid%29.svg.png",
   "Real Valladolid":
