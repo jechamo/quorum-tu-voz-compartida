@@ -1,21 +1,10 @@
 import * as React from "react";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export type Option = {
   label: string;
@@ -39,8 +28,23 @@ export function MultiSelect({
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(false);
 
-  const handleUnselect = (item: string) => {
-    onChange(selected.filter((i) => i !== item));
+  const handleSelect = (value: string) => {
+    if (selected.includes(value)) {
+      onChange(selected.filter((item) => item !== value));
+    } else {
+      onChange([...selected, value]);
+    }
+  };
+
+  // Texto resumen para el botón
+  const getButtonText = () => {
+    if (selected.length === 0) return <span className="text-muted-foreground">{placeholder}</span>;
+    if (selected.length === options.length) return "Todos seleccionados";
+    if (selected.length === 1) return options.find((o) => o.value === selected[0])?.label;
+    if (selected.length <= 2) {
+      return selected.map((val) => options.find((o) => o.value === val)?.label).join(", ");
+    }
+    return `${selected.length} seleccionados`;
   };
 
   return (
@@ -50,94 +54,39 @@ export function MultiSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn(
-            "w-full justify-between min-h-[2.5rem] h-auto",
-            className
-          )}
+          className={cn("w-full justify-between font-normal", className)}
         >
-          <div className="flex flex-wrap gap-1 items-center">
-            {selected.length === 0 && (
-              <span className="text-muted-foreground font-normal">
-                {placeholder}
-              </span>
-            )}
-            {selected.length > 0 && (
-              <>
-                {/* Mostrar solo los primeros 2 badges para no saturar */}
-                {selected.slice(0, 2).map((item) => {
-                  const option = options.find((o) => o.value === item);
-                  return (
-                    <Badge
-                      variant="secondary"
-                      key={item}
-                      className="mr-1 mb-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleUnselect(item);
-                      }}
-                    >
-                      {option?.label}
-                      <button
-                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleUnselect(item);
-                          }
-                        }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleUnselect(item);
-                        }}
-                      >
-                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-                      </button>
-                    </Badge>
-                  );
-                })}
-                {/* Contador si hay más de 2 */}
-                {selected.length > 2 && (
-                  <Badge variant="secondary" className="mr-1 mb-1">
-                    +{selected.length - 2} más
-                  </Badge>
-                )}
-              </>
-            )}
-          </div>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          <span className="truncate">{getButtonText()}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
+      <PopoverContent className="w-full p-0" align="start">
         <Command>
           <CommandInput placeholder="Buscar..." />
           <CommandList>
             <CommandEmpty>No se encontraron resultados.</CommandEmpty>
-            <CommandGroup className="max-h-64 overflow-auto">
+            <CommandGroup>
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  onSelect={() => {
-                    const isSelected = selected.includes(option.value);
-                    if (isSelected) {
-                      onChange(selected.filter((item) => item !== option.value));
-                    } else {
-                      onChange([...selected, option.value]);
-                    }
-                  }}
+                  value={option.label} // Usamos label para búsqueda
+                  onSelect={() => handleSelect(option.value)}
+                  className="cursor-pointer"
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      selected.includes(option.value)
-                        ? "opacity-100"
-                        : "opacity-0"
-                    )}
-                  />
-                  {option.label}
+                  <div className="flex items-center gap-2 w-full">
+                    {/* Checkbox visual controlado por el estado */}
+                    <div
+                      className={cn(
+                        "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        selected.includes(option.value)
+                          ? "bg-primary text-primary-foreground"
+                          : "opacity-50 [&_svg]:invisible",
+                      )}
+                    >
+                      <Check className="h-3 w-3" />
+                    </div>
+                    <span>{option.label}</span>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>

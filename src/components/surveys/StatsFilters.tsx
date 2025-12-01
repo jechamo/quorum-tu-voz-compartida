@@ -12,43 +12,36 @@ interface StatsFiltersProps {
 }
 
 export interface FilterState {
-  partyIds: string[]; // <-- CAMBIO A ARRAY
-  teamIds: string[]; // <-- CAMBIO A ARRAY
+  partyIds: string[];
+  teamIds: string[];
   gender: string | null;
-  ageMin: number | null;
-  ageMax: number | null;
+  ageRanges: string[]; // Ahora es un array de IDs de rangos (ej: ["18-25", "65+"])
 }
 
-const AGE_RANGES = [
-  { label: "Todos", min: null, max: null },
-  { label: "18-25", min: 18, max: 25 },
-  { label: "26-35", min: 26, max: 35 },
-  { label: "36-42", min: 36, max: 42 },
-  { label: "43-55", min: 43, max: 55 },
-  { label: "56-64", min: 56, max: 64 },
-  { label: "65+", min: 65, max: null },
+export const AGE_RANGES = [
+  { id: "18-25", label: "18-25 años", min: 18, max: 25 },
+  { id: "26-35", label: "26-35 años", min: 26, max: 35 },
+  { id: "36-42", label: "36-42 años", min: 36, max: 42 },
+  { id: "43-55", label: "43-55 años", min: 43, max: 55 },
+  { id: "56-64", label: "56-64 años", min: 56, max: 64 },
+  { id: "65+", label: "65+ años", min: 65, max: 120 },
 ];
 
 export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => {
   const [parties, setParties] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
 
-  // Estado inicial con arrays vacíos
   const [filters, setFilters] = useState<FilterState>({
     partyIds: [],
     teamIds: [],
     gender: null,
-    ageMin: null,
-    ageMax: null,
+    ageRanges: [],
   });
   const isFirstRender = useRef(true);
 
   useEffect(() => {
-    if (module === "politica") {
-      loadParties();
-    } else {
-      loadTeams();
-    }
+    if (module === "politica") loadParties();
+    else loadTeams();
   }, [module]);
 
   useEffect(() => {
@@ -69,18 +62,11 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
     if (data) setTeams(data);
   };
 
-  const handleAgeRangeChange = (value: string) => {
-    const range = AGE_RANGES.find((r) => r.label === value);
-    if (range) {
-      setFilters((prev) => ({ ...prev, ageMin: range.min, ageMax: range.max }));
-    }
-  };
-
   return (
     <Card className="p-4 bg-muted/20 space-y-4">
       <div className="flex items-center gap-2 text-muted-foreground border-b pb-2">
         <Info className="w-4 h-4" />
-        <span className="text-sm font-medium">Filtros para visualizar Resultados (No afectan a tu voto)</span>
+        <span className="text-sm font-medium">Filtros para visualizar Resultados</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -91,7 +77,7 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
               options={parties.map((p) => ({ label: p.name, value: p.id }))}
               selected={filters.partyIds}
               onChange={(selected) => setFilters((prev) => ({ ...prev, partyIds: selected }))}
-              placeholder="Selecciona partidos..."
+              placeholder="Todos los partidos"
             />
           </div>
         )}
@@ -103,10 +89,21 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
               options={teams.map((t) => ({ label: t.name, value: t.id }))}
               selected={filters.teamIds}
               onChange={(selected) => setFilters((prev) => ({ ...prev, teamIds: selected }))}
-              placeholder="Selecciona equipos..."
+              placeholder="Todos los equipos"
             />
           </div>
         )}
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Rango de Edad</Label>
+          {/* Nuevo MultiSelect para Edad */}
+          <MultiSelect
+            options={AGE_RANGES.map((r) => ({ label: r.label, value: r.id }))}
+            selected={filters.ageRanges}
+            onChange={(selected) => setFilters((prev) => ({ ...prev, ageRanges: selected }))}
+            placeholder="Todas las edades"
+          />
+        </div>
 
         <div className="space-y-2">
           <Label className="text-sm font-medium">Sexo</Label>
@@ -122,25 +119,6 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
               <SelectItem value="masculino">Masculino</SelectItem>
               <SelectItem value="femenino">Femenino</SelectItem>
               <SelectItem value="otro">Otro</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Rango de Edad</Label>
-          <Select
-            value={AGE_RANGES.find((r) => r.min === filters.ageMin && r.max === filters.ageMax)?.label || "Todos"}
-            onValueChange={handleAgeRangeChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Todos" />
-            </SelectTrigger>
-            <SelectContent>
-              {AGE_RANGES.map((range) => (
-                <SelectItem key={range.label} value={range.label}>
-                  {range.label}
-                </SelectItem>
-              ))}
             </SelectContent>
           </Select>
         </div>

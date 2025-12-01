@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar, CheckCircle2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { StatsFilters, FilterState } from "./StatsFilters";
+import { StatsFilters, FilterState, AGE_RANGES } from "./StatsFilters";
 import { useToast } from "@/hooks/use-toast";
 import { QuestionComments } from "./QuestionComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-// --- RANKINGS PARA ORDENACIÓN ---
+// --- RANKINGS (Mismos que en WeeklySurveys) ---
 const PARTY_RANKING: Record<string, number> = {
   "Partido Popular": 1,
   PSOE: 2,
@@ -65,13 +65,11 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   const [userAnswers, setUserAnswers] = useState<{ [key: string]: string }>({});
   const [userProfile, setUserProfile] = useState<any>(null);
 
-  // Estado de filtros MultiSelect
   const [filters, setFilters] = useState<FilterState>({
     partyIds: [],
     teamIds: [],
     gender: null,
-    ageMin: null,
-    ageMax: null,
+    ageRanges: [],
   });
 
   useEffect(() => {
@@ -91,20 +89,17 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
   const loadWeeks = async () => {
     let query = supabase.from("questions").select("week_start_date").eq("module", module);
-
     if (!isAdmin) {
       const today = new Date().toISOString().split("T")[0];
       query = query.lte("week_start_date", today);
     }
-
     const { data } = await query.order("week_start_date", { ascending: false }).limit(100);
 
     if (data) {
       const uniqueWeeks = Array.from(new Set(data.map((d) => d.week_start_date)));
       setWeeks(uniqueWeeks);
-      if (uniqueWeeks.length > 0) {
-        setSelectedWeek(uniqueWeeks[0]);
-      } else {
+      if (uniqueWeeks.length > 0) setSelectedWeek(uniqueWeeks[0]);
+      else {
         setWeeks([]);
         setSelectedWeek(null);
       }
@@ -136,17 +131,31 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
       const questionsWithResults = await Promise.all(
         questions.map(async (question) => {
-          // Arrays para la RPC
-          const partyIdsParam = filters.partyIds && filters.partyIds.length > 0 ? filters.partyIds : null;
-          const teamIdsParam = filters.teamIds && filters.teamIds.length > 0 ? filters.teamIds : null;
+          // Prepare params for RPC
+          const partyIdsParam = filters.partyIds.length > 0 ? filters.partyIds : null;
+          const teamIdsParam = filters.teamIds.length > 0 ? filters.teamIds : null;
+
+          let ageMins: number[] | null = null;
+          let ageMaxs: number[] | null = null;
+          if (filters.ageRanges.length > 0) {
+            ageMins = [];
+            ageMaxs = [];
+            filters.ageRanges.forEach((rangeId) => {
+              const range = AGE_RANGES.find((r) => r.id === rangeId);
+              if (range) {
+                ageMins!.push(range.min);
+                ageMaxs!.push(range.max);
+              }
+            });
+          }
 
           const { data: statsData } = await supabase.rpc("get_question_stats_filtered", {
             question_uuid: question.id,
             filter_party_ids: partyIdsParam,
             filter_team_ids: teamIdsParam,
             filter_gender: filters.gender as any,
-            filter_age_min: filters.ageMin,
-            filter_age_max: filters.ageMax,
+            filter_age_mins: ageMins,
+            filter_age_maxs: ageMaxs,
           });
 
           const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
@@ -168,30 +177,21 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   };
 
   const getWeekIndex = () => weeks.indexOf(selectedWeek || "");
-
   const goToPrevWeek = () => {
     const index = getWeekIndex();
-    if (index < weeks.length - 1) {
-      setSelectedWeek(weeks[index + 1]);
-    }
+    if (index < weeks.length - 1) setSelectedWeek(weeks[index + 1]);
   };
-
   const goToNextWeek = () => {
     const index = getWeekIndex();
-    if (index > 0) {
-      setSelectedWeek(weeks[index - 1]);
-    }
+    if (index > 0) setSelectedWeek(weeks[index - 1]);
   };
-
-  const formatWeekDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
-  };
+  const formatWeekDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
   const handleAnswer = async (questionId: string) => {
     const answerId = answers[questionId];
     if (!answerId) {
-      toast({ title: "Error", description: "Por favor selecciona una respuesta", variant: "destructive" });
+      toast({ title: "Error", description: "Selecciona respuesta", variant: "destructive" });
       return;
     }
 
@@ -201,31 +201,23 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
         question_id: questionId,
         answer_option_id: answerId,
       });
-
       if (error) throw error;
-
-      toast({ title: "¡Respuesta enviada!", description: "Tu respuesta ha sido registrada correctamente" });
-
-      if (selectedWeek) {
-        loadWeekData(selectedWeek);
-      }
+      toast({ title: "Respuesta enviada", description: "Registrada correctamente" });
+      if (selectedWeek) loadWeekData(selectedWeek);
     } catch (error) {
-      toast({ title: "Error", description: "No se pudo enviar la respuesta", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudo enviar", variant: "destructive" });
     }
   };
 
-  // Lógica de Agrupación y Ordenación
+  // Grouping & Sorting Logic (Identical to WeeklySurveys)
   const questionsList = weekData || [];
-
   const generalQuestions = questionsList.filter((q: any) => q.scope === "general");
-
   const myAffiliationQuestions = questionsList.filter((q: any) => {
     if (q.scope !== "specific") return false;
     if (module === "politica") return q.party_id === userProfile?.party_id;
     if (module === "futbol") return q.team_id === userProfile?.team_id;
     return false;
   });
-
   const otherQuestions = questionsList.filter(
     (q: any) => !generalQuestions.includes(q) && !myAffiliationQuestions.includes(q),
   );
@@ -241,9 +233,8 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
   const renderQuestionCard = (question: any) => {
     const hasAnswered = !!userAnswers[question.id];
-
     return (
-      <Card key={question.id} className="p-6 bg-card shadow-sm border">
+      <Card key={question.id} className="p-6 bg-card">
         <div className="space-y-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -261,7 +252,6 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
             </div>
             <h3 className="text-lg font-semibold text-foreground">{question.text}</h3>
           </div>
-
           {!hasAnswered ? (
             <div className="space-y-4">
               <RadioGroup
@@ -307,20 +297,17 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
             </div>
           )}
         </div>
-
         <QuestionComments questionId={question.id} />
       </Card>
     );
   };
 
-  if (weeks.length === 0) {
+  if (weeks.length === 0)
     return (
       <Card className="p-8 text-center bg-card">
-        <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-muted-foreground">No hay historial de encuestas disponible</p>
+        <p className="text-muted-foreground">No hay historial disponible</p>
       </Card>
     );
-  }
 
   return (
     <div className="space-y-6">
@@ -353,7 +340,6 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
               </AccordionContent>
             </AccordionItem>
           )}
-
           {myAffiliationQuestions.length > 0 && (
             <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4 shadow-sm">
               <AccordionTrigger className="hover:no-underline py-4">
@@ -366,7 +352,6 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
               </AccordionContent>
             </AccordionItem>
           )}
-
           {otherQuestions.length > 0 && (
             <AccordionItem value="others" className="border rounded-lg bg-card px-4 shadow-sm">
               <AccordionTrigger className="hover:no-underline py-4">
