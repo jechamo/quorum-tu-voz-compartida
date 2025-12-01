@@ -29,16 +29,14 @@ export interface SignUpData {
 }
 
 export const signUp = async (data: SignUpData) => {
-  // 1. VALIDACIÓN DE SEGURIDAD ANTES DE ENVIAR NADA
+  // 1. Validación
   const validation = signUpSchema.safeParse(data);
   if (!validation.success) {
-    // Devolvemos el primer error que encontremos para mostrarlo
     throw new Error(validation.error.errors[0].message);
   }
 
-  // Create auth user with phone as email
+  // 2. Crear usuario Auth
   const email = `${data.phone}@quorum.app`;
-
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password: data.password,
@@ -47,7 +45,6 @@ export const signUp = async (data: SignUpData) => {
         phone: data.phone,
         username: data.username,
       },
-      // En móvil esto es ignorado, pero necesario por la API
       emailRedirectTo: `http://localhost`,
     },
   });
@@ -55,26 +52,48 @@ export const signUp = async (data: SignUpData) => {
   if (authError) throw authError;
   if (!authData.user) throw new Error("No se pudo crear el usuario");
 
-  // Create profile
+  // ---------------------------------------------------------
+  // 3. LÓGICA DE ASIGNACIÓN POR DEFECTO (Anti-Fantasmas)
+  // ---------------------------------------------------------
+  let finalPartyId = data.partyId;
+  let finalTeamId = data.teamId;
+
+  // Si no eligió partido, buscamos el ID de "Ninguno/Apolítico"
+  if (!finalPartyId) {
+    const { data: noneParty } = await supabase
+      .from("parties")
+      .select("id")
+      .eq("name", "Ninguno/Apolítico")
+      .maybeSingle();
+    if (noneParty) finalPartyId = noneParty.id;
+  }
+
+  // Si no eligió equipo, buscamos el ID de "Libre/Sin equipo"
+  if (!finalTeamId) {
+    const { data: noneTeam } = await supabase.from("teams").select("id").eq("name", "Libre/Sin equipo").maybeSingle();
+    if (noneTeam) finalTeamId = noneTeam.id;
+  }
+  // ---------------------------------------------------------
+
+  // 4. Crear perfil
   const { error: profileError } = await supabase.from("profiles").insert({
     id: authData.user.id,
     phone: data.phone,
     username: data.username,
     gender: data.gender,
     age: data.age,
-    party_id: data.partyId || null,
-    team_id: data.teamId || null,
+    party_id: finalPartyId || null, // Ahora intentará no ser NULL
+    team_id: finalTeamId || null,
     accepted_terms: data.acceptedTerms,
     accepted_terms_at: new Date().toISOString(),
   });
 
   if (profileError) {
-    // Si falla el perfil, intentamos borrar el usuario auth para no dejarlo "colgado"
     await supabase.auth.signOut();
     throw profileError;
   }
 
-  // Assign user role
+  // 5. Asignar rol
   const { error: roleError } = await supabase.from("user_roles").insert({
     user_id: authData.user.id,
     role: "user",
@@ -85,7 +104,6 @@ export const signUp = async (data: SignUpData) => {
   return authData;
 };
 
-// ... (El resto de funciones signIn, signOut, etc. las dejas igual que estaban)
 export const signIn = async (phone: string, password: string) => {
   const email = `${phone}@quorum.app`;
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
