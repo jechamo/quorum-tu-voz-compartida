@@ -29,21 +29,24 @@ export const AGE_RANGES = [
 
 // --- LOGOS CORREGIDOS (URLs más estables de 500px) ---
 const PARTY_LOGOS: Record<string, string> = {
-  PSOE: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logotipo_del_PSOE.svg/512px-Logotipo_del_PSOE.svg.png",
-  "Partido Popular": "https://upload.wikimedia.org/wikipedia/commons/b/bb/Partido_Popular.svg",
-  VOX: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/VOX_logo.svg/512px-VOX_logo.svg.png",
-  Sumar: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Sumar_Logo_2023.svg/512px-Sumar_Logo_2023.svg.png",
-  ERC: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Esquerra_Republicana_de_Catalunya_logo_%282024%29.svg/512px-Esquerra_Republicana_de_Catalunya_logo_%282024%29.svg.png",
+  PSOE: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Logotipo_del_PSOE.svg/267px-Logotipo_del_PSOE.svg.png",
+  "Partido Popular":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/Partido_Popular.svg/177px-Partido_Popular.svg.png",
+  VOX: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/VOX_logo.svg/365px-VOX_logo.svg.png",
+  Sumar: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Sumar_logo.svg/512px-Sumar_logo.svg.png",
+  ERC: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/ERC_logotipo_compacto.svg/50px-ERC_logotipo_compacto.svg.png",
   Junts:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Junts_per_Catalunya_2020.svg/512px-Junts_per_Catalunya_2020.svg.png",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Logotip_Junts_per_Catalunya.svg/100px-Logotip_Junts_per_Catalunya.svg.png",
   Bildu:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/EH_Bildu_logotipoa.svg/512px-EH_Bildu_logotipoa.svg.png",
-  PNV: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/EAJ-PNV_logo_2016.svg/512px-EAJ-PNV_logo_2016.svg.png",
-  Podemos: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Podemos_logo.svg/512px-Podemos_logo.svg.png",
-  BNG: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/BNG_logo_2016.svg/512px-BNG_logo_2016.svg.png",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Icono_de_EH_Bildu_%282023%29.svg/282px-Icono_de_EH_Bildu_%282023%29.svg.png",
+  PNV: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Icono_EAJ-PNV_2025.svg/605px-Icono_EAJ-PNV_2025.svg.png",
+  Podemos:
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Podemos_logo_2020.svg/279px-Podemos_logo_2020.svg.png",
+  BNG: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/BNG_logo.svg/400px-BNG_logo.svg.png",
   Compromís:
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Compromis_logo.svg/512px-Compromis_logo.svg.png",
-  Ciudadanos: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Ciudadanos-Cs.svg/512px-Ciudadanos-Cs.svg.png",
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Comprom%C3%ADs-Podemos-%C3%89s_el_moment.svg/344px-Comprom%C3%ADs-Podemos-%C3%89s_el_moment.svg.png",
+  Ciudadanos:
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Ciudadanos_logo_2017.svg/580px-Ciudadanos_logo_2017.svg.png",
 };
 
 const TEAM_LOGOS: Record<string, string> = {
