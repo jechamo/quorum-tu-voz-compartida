@@ -30,8 +30,7 @@ export const AGE_RANGES = [
 // --- LOGOS CORREGIDOS (URLs más estables de 500px) ---
 const PARTY_LOGOS: Record<string, string> = {
   PSOE: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logotipo_del_PSOE.svg/512px-Logotipo_del_PSOE.svg.png",
-  "Partido Popular":
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Partido_Popular_Logotipo_2019.png/512px-Partido_Popular_Logotipo_2019.png",
+  "Partido Popular": "https://upload.wikimedia.org/wikipedia/commons/b/bb/Partido_Popular.svg",
   VOX: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/VOX_logo.svg/512px-VOX_logo.svg.png",
   Sumar: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Sumar_Logo_2023.svg/512px-Sumar_Logo_2023.svg.png",
   ERC: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Esquerra_Republicana_de_Catalunya_logo_%282024%29.svg/512px-Esquerra_Republicana_de_Catalunya_logo_%282024%29.svg.png",
