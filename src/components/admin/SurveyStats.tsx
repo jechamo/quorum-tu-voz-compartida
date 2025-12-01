@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getCurrentWeekStart } from "@/lib/dateUtils";
 import { BarChart3 } from "lucide-react";
-import { StatsFilters, FilterState } from "../surveys/StatsFilters";
+import { StatsFilters, FilterState, AGE_RANGES } from "../surveys/StatsFilters";
 
 interface StatsContentProps {
   stats: any[];
@@ -61,26 +61,28 @@ const StatsContent = ({ stats, color, module, onFiltersChange }: StatsContentPro
 export const SurveyStats = () => {
   const [politicaStats, setPoliticaStats] = useState<any[]>([]);
   const [futbolStats, setFutbolStats] = useState<any[]>([]);
+
+  // Estado inicial actualizado a la nueva estructura (Arrays)
   const [politicaFilters, setPoliticaFilters] = useState<FilterState>({
-    partyId: null,
-    teamId: null,
+    partyIds: [],
+    teamIds: [],
     gender: null,
-    ageMin: null,
-    ageMax: null,
+    ageRanges: [],
   });
+
   const [futbolFilters, setFutbolFilters] = useState<FilterState>({
-    partyId: null,
-    teamId: null,
+    partyIds: [],
+    teamIds: [],
     gender: null,
-    ageMin: null,
-    ageMax: null,
+    ageRanges: [],
   });
+
   const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
 
   const loadStats = useCallback(async (filters: { politica: FilterState; futbol: FilterState }) => {
     const weekStart = getCurrentWeekStart();
 
-    // Load política stats
+    // --- CARGAR ESTADÍSTICAS POLÍTICA ---
     const { data: politicaQuestions } = await supabase
       .from("questions")
       .select("*, answer_options(*)")
@@ -89,13 +91,28 @@ export const SurveyStats = () => {
 
     if (politicaQuestions) {
       const statsPromises = politicaQuestions.map(async (q) => {
+        // Preparar filtros de edad política
+        let ageMinsP: number[] | null = null;
+        let ageMaxsP: number[] | null = null;
+        if (filters.politica.ageRanges.length > 0) {
+          ageMinsP = [];
+          ageMaxsP = [];
+          filters.politica.ageRanges.forEach((id) => {
+            const r = AGE_RANGES.find((ar) => ar.id === id);
+            if (r) {
+              ageMinsP!.push(r.min);
+              ageMaxsP!.push(r.max);
+            }
+          });
+        }
+
         const { data: statsData } = await supabase.rpc("get_question_stats_filtered", {
           question_uuid: q.id,
-          filter_party_id: filters.politica.partyId,
-          filter_team_id: filters.politica.teamId,
+          filter_party_ids: filters.politica.partyIds.length > 0 ? filters.politica.partyIds : null,
+          filter_team_ids: filters.politica.teamIds.length > 0 ? filters.politica.teamIds : null,
           filter_gender: filters.politica.gender as any,
-          filter_age_min: filters.politica.ageMin,
-          filter_age_max: filters.politica.ageMax,
+          filter_age_mins: ageMinsP,
+          filter_age_maxs: ageMaxsP,
         });
 
         const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
@@ -119,7 +136,7 @@ export const SurveyStats = () => {
       setPoliticaStats(stats);
     }
 
-    // Load fútbol stats
+    // --- CARGAR ESTADÍSTICAS FÚTBOL ---
     const { data: futbolQuestions } = await supabase
       .from("questions")
       .select("*, answer_options(*)")
@@ -128,13 +145,28 @@ export const SurveyStats = () => {
 
     if (futbolQuestions) {
       const statsPromises = futbolQuestions.map(async (q) => {
+        // Preparar filtros de edad fútbol
+        let ageMinsF: number[] | null = null;
+        let ageMaxsF: number[] | null = null;
+        if (filters.futbol.ageRanges.length > 0) {
+          ageMinsF = [];
+          ageMaxsF = [];
+          filters.futbol.ageRanges.forEach((id) => {
+            const r = AGE_RANGES.find((ar) => ar.id === id);
+            if (r) {
+              ageMinsF!.push(r.min);
+              ageMaxsF!.push(r.max);
+            }
+          });
+        }
+
         const { data: statsData } = await supabase.rpc("get_question_stats_filtered", {
           question_uuid: q.id,
-          filter_party_id: filters.futbol.partyId,
-          filter_team_id: filters.futbol.teamId,
+          filter_party_ids: filters.futbol.partyIds.length > 0 ? filters.futbol.partyIds : null,
+          filter_team_ids: filters.futbol.teamIds.length > 0 ? filters.futbol.teamIds : null,
           filter_gender: filters.futbol.gender as any,
-          filter_age_min: filters.futbol.ageMin,
-          filter_age_max: filters.futbol.ageMax,
+          filter_age_mins: ageMinsF,
+          filter_age_maxs: ageMaxsF,
         });
 
         const total = statsData && statsData.length > 0 ? Number(statsData[0].total_votes) : 0;
