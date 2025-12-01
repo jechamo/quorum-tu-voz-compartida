@@ -15,7 +15,7 @@ export interface FilterState {
   partyIds: string[];
   teamIds: string[];
   gender: string | null;
-  ageRanges: string[]; // Ahora es un array de IDs de rangos (ej: ["18-25", "65+"])
+  ageRanges: string[];
 }
 
 export const AGE_RANGES = [
@@ -26,6 +26,68 @@ export const AGE_RANGES = [
   { id: "56-64", label: "56-64 años", min: 56, max: 64 },
   { id: "65+", label: "65+ años", min: 65, max: 120 },
 ];
+
+// --- LOGOS (URLs Públicas para simplificar) ---
+// Puedes cambiar estas URLs por las que tú quieras o subirlas a tu Supabase Storage en el futuro.
+const PARTY_LOGOS: Record<string, string> = {
+  PSOE: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logotipo_del_PSOE.svg/1200px-Logotipo_del_PSOE.svg.png",
+  "Partido Popular":
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Partido_Popular_Logotipo_2019.png/1200px-Partido_Popular_Logotipo_2019.png",
+  VOX: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/VOX_logo.svg/1200px-VOX_logo.svg.png",
+  Sumar: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Sumar_Logo_2023.svg/1200px-Sumar_Logo_2023.svg.png",
+  ERC: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Esquerra_Republicana_de_Catalunya.svg/1200px-Esquerra_Republicana_de_Catalunya.svg.png",
+  Junts:
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Junts_per_Catalunya_2020.svg/1200px-Junts_per_Catalunya_2020.svg.png",
+  Bildu:
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/EH_Bildu_logotipoa.svg/1200px-EH_Bildu_logotipoa.svg.png",
+  PNV: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/EAJ-PNV_logo_2016.svg/1200px-EAJ-PNV_logo_2016.svg.png",
+  Podemos: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Podemos_logo.svg/1200px-Podemos_logo.svg.png",
+  BNG: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f6/BNG_logo_2016.svg/1200px-BNG_logo_2016.svg.png",
+  Compromís:
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Compromis_logo.svg/1200px-Compromis_logo.svg.png",
+  Ciudadanos:
+    "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Ciudadanos-Cs.svg/1200px-Ciudadanos-Cs.svg.png",
+};
+
+const TEAM_LOGOS: Record<string, string> = {
+  "FC Barcelona":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/1200px-FC_Barcelona_%28crest%29.svg.png",
+  "Real Madrid":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/1200px-Real_Madrid_CF.svg.png",
+  "Atlético de Madrid":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/f/f4/Atletico_Madrid_2017_logo.svg/1200px-Atletico_Madrid_2017_logo.svg.png",
+  "Athletic Club":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/9/98/Club_Athletic_Bilbao_logo.svg/1200px-Club_Athletic_Bilbao_logo.svg.png",
+  "Real Betis":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/1/13/Real_betis_logo.svg/1200px-Real_betis_logo.svg.png",
+  "Sevilla FC":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/3/3b/Sevilla_FC_logo.svg/1200px-Sevilla_FC_logo.svg.png",
+  "Real Sociedad":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/f/f1/Real_Sociedad_logo.svg/1200px-Real_Sociedad_logo.svg.png",
+  "Villarreal CF":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/7/70/Villarreal_CF_logo.svg/1200px-Villarreal_CF_logo.svg.png",
+  "Valencia CF": "https://upload.wikimedia.org/wikipedia/en/thumb/c/ce/Valenciacf.svg/1200px-Valenciacf.svg.png",
+  "RCD Espanyol":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/d/d6/Rcd_espanyol_logo.svg/1200px-Rcd_espanyol_logo.svg.png",
+  "Getafe CF": "https://upload.wikimedia.org/wikipedia/en/thumb/4/45/Getafe_CF_logo.svg/1200px-Getafe_CF_logo.svg.png",
+  "RCD Mallorca":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/RCD_Mallorca_logo.svg/1200px-RCD_Mallorca_logo.svg.png",
+  "CA Osasuna": "https://upload.wikimedia.org/wikipedia/en/thumb/d/db/Osasuna_logo.svg/1200px-Osasuna_logo.svg.png",
+  "Rayo Vallecano":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/1/1b/Rayo_Vallecano_logo.svg/1200px-Rayo_Vallecano_logo.svg.png",
+  "Celta de Vigo":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/1/12/RC_Celta_de_Vigo_logo.svg/1200px-RC_Celta_de_Vigo_logo.svg.png",
+  "Deportivo Alavés":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/2/2e/Deportivo_Alaves_logo.svg/1200px-Deportivo_Alaves_logo.svg.png",
+  "Girona FC":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/9/90/Girona_FC_Crest.svg/1200px-Girona_FC_Crest.svg.png",
+  "UD Las Palmas":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/7/76/UD_Las_Palmas_logo.svg/1200px-UD_Las_Palmas_logo.svg.png",
+  "CD Leganés":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/0/02/Club_Deportivo_Legan%C3%A9s.svg/1200px-Club_Deportivo_Legan%C3%A9s.svg.png",
+  "Real Valladolid":
+    "https://upload.wikimedia.org/wikipedia/en/thumb/6/6e/Real_Valladolid_Logo.svg/1200px-Real_Valladolid_Logo.svg.png",
+};
 
 export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => {
   const [parties, setParties] = useState<any[]>([]);
@@ -66,7 +128,7 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
     <Card className="p-4 bg-muted/20 space-y-4">
       <div className="flex items-center gap-2 text-muted-foreground border-b pb-2">
         <Info className="w-4 h-4" />
-        <span className="text-sm font-medium">Filtros para visualizar Resultados</span>
+        <span className="text-sm font-medium">Filtros para visualizar Resultados (No afectan a tu voto)</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -74,7 +136,12 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
           <div className="space-y-2">
             <Label className="text-sm font-medium">Partidos Políticos</Label>
             <MultiSelect
-              options={parties.map((p) => ({ label: p.name, value: p.id }))}
+              // Aquí inyectamos las imágenes desde nuestro mapa
+              options={parties.map((p) => ({
+                label: p.name,
+                value: p.id,
+                image: PARTY_LOGOS[p.name],
+              }))}
               selected={filters.partyIds}
               onChange={(selected) => setFilters((prev) => ({ ...prev, partyIds: selected }))}
               placeholder="Todos los partidos"
@@ -86,7 +153,12 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
           <div className="space-y-2">
             <Label className="text-sm font-medium">Equipos de Fútbol</Label>
             <MultiSelect
-              options={teams.map((t) => ({ label: t.name, value: t.id }))}
+              // Aquí inyectamos las imágenes desde nuestro mapa
+              options={teams.map((t) => ({
+                label: t.name,
+                value: t.id,
+                image: TEAM_LOGOS[t.name],
+              }))}
               selected={filters.teamIds}
               onChange={(selected) => setFilters((prev) => ({ ...prev, teamIds: selected }))}
               placeholder="Todos los equipos"
@@ -96,7 +168,6 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
 
         <div className="space-y-2">
           <Label className="text-sm font-medium">Rango de Edad</Label>
-          {/* Nuevo MultiSelect para Edad */}
           <MultiSelect
             options={AGE_RANGES.map((r) => ({ label: r.label, value: r.id }))}
             selected={filters.ageRanges}
