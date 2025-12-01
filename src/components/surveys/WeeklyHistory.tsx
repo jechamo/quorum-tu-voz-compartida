@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { StatsFilters, FilterState } from "./StatsFilters";
 import { useToast } from "@/hooks/use-toast";
 import { QuestionComments } from "./QuestionComments";
-import { useAuth } from "@/contexts/AuthContext"; // <--- 1. Importamos useAuth
+import { useAuth } from "@/contexts/AuthContext";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface WeeklyHistoryProps {
   module: "politica" | "futbol";
@@ -17,12 +18,13 @@ interface WeeklyHistoryProps {
 
 export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   const { toast } = useToast();
-  const { isAdmin } = useAuth(); // <--- 2. Obtenemos si es admin
+  const { isAdmin } = useAuth();
   const [weeks, setWeeks] = useState<any[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [weekData, setWeekData] = useState<any>(null);
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [userAnswers, setUserAnswers] = useState<{ [key: string]: string }>({});
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [filters, setFilters] = useState<FilterState>({
     partyId: null,
     teamId: null,
@@ -32,8 +34,13 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   });
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      const { data } = await supabase.from("profiles").select("party_id, team_id").eq("id", userId).single();
+      setUserProfile(data);
+    };
+    fetchProfile();
     loadWeeks();
-  }, [module, isAdmin]); // Añadimos isAdmin a las dependencias por si cambia
+  }, [module, isAdmin, userId]);
 
   useEffect(() => {
     if (selectedWeek) {
@@ -42,16 +49,13 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   }, [selectedWeek, filters]);
 
   const loadWeeks = async () => {
-    // 3. Construimos la consulta base
     let query = supabase.from("questions").select("week_start_date").eq("module", module);
 
-    // 4. Si NO es admin, filtramos para que solo vea hasta hoy
     if (!isAdmin) {
       const today = new Date().toISOString().split("T")[0];
       query = query.lte("week_start_date", today);
     }
 
-    // Ejecutamos la consulta con el orden y límite
     const { data } = await query.order("week_start_date", { ascending: false }).limit(100);
 
     if (data) {
@@ -74,7 +78,6 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
       .eq("week_start_date", weekStart);
 
     if (questions) {
-      // Load user's answers for this week
       const { data: existingAnswers } = await supabase
         .from("user_answers")
         .select("question_id, answer_option_id")
@@ -165,7 +168,6 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
         description: "Tu respuesta ha sido registrada correctamente",
       });
 
-      // Reload data to show results
       if (selectedWeek) {
         loadWeekData(selectedWeek);
       }
@@ -176,6 +178,103 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  // Grouping Logic
+  const questionsList = weekData || [];
+
+  const generalQuestions = questionsList.filter((q: any) => q.scope === "general");
+
+  const myAffiliationQuestions = questionsList.filter((q: any) => {
+    if (q.scope !== "specific") return false;
+    if (module === "politica") return q.party_id === userProfile?.party_id;
+    if (module === "futbol") return q.team_id === userProfile?.team_id;
+    return false;
+  });
+
+  const otherQuestions = questionsList.filter(
+    (q: any) => !generalQuestions.includes(q) && !myAffiliationQuestions.includes(q),
+  );
+
+  // Placeholder sort
+  otherQuestions.sort((a: any, b: any) => {
+    const nameA = a.parties?.name || a.teams?.name || "";
+    const nameB = b.parties?.name || b.teams?.name || "";
+    return nameA.localeCompare(nameB);
+  });
+
+  const renderQuestionCard = (question: any) => {
+    const hasAnswered = !!userAnswers[question.id];
+
+    return (
+      <Card key={question.id} className="p-6 bg-card">
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              {hasAnswered && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+              {question.is_mandatory && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground">
+                  Obligatoria
+                </span>
+              )}
+              {question.scope === "specific" && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  {question.parties ? question.parties.name : question.teams.name}
+                </span>
+              )}
+            </div>
+            <h3 className="text-lg font-semibold text-foreground">{question.text}</h3>
+          </div>
+
+          {!hasAnswered ? (
+            <div className="space-y-4">
+              <RadioGroup
+                value={answers[question.id] || ""}
+                onValueChange={(value) => setAnswers((prev) => ({ ...prev, [question.id]: value }))}
+              >
+                {question.answer_options
+                  .sort((a: any, b: any) => a.option_order - b.option_order)
+                  .map((option: any) => (
+                    <div key={option.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} />
+                      <Label htmlFor={`${question.id}-${option.id}`} className="cursor-pointer">
+                        {option.text}
+                      </Label>
+                    </div>
+                  ))}
+              </RadioGroup>
+              <Button
+                onClick={() => handleAnswer(question.id)}
+                className="w-full"
+                variant={module === "politica" ? "default" : "secondary"}
+              >
+                Enviar Respuesta
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-foreground">Resultados ({question.results.total} respuestas):</p>
+              {question.results.options.map((option: any) => (
+                <div key={option.id} className="space-y-1">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-foreground">{option.text}</span>
+                    <span className="font-semibold text-foreground">{option.percentage}%</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${module === "politica" ? "bg-primary" : "bg-secondary"}`}
+                      style={{ width: `${option.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <QuestionComments questionId={question.id} />
+      </Card>
+    );
   };
 
   if (weeks.length === 0) {
@@ -207,83 +306,44 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
       <StatsFilters module={module} onFiltersChange={setFilters} />
 
       {weekData && weekData.length > 0 ? (
-        <div className="space-y-4">
-          {weekData.map((question: any) => {
-            const hasAnswered = !!userAnswers[question.id];
+        <Accordion type="multiple" defaultValue={["general", "my-affiliation", "others"]} className="space-y-4">
+          {generalQuestions.length > 0 && (
+            <AccordionItem value="general" className="border rounded-lg bg-card px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <span className="text-lg font-bold text-foreground">Preguntas Generales</span>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 pb-4 space-y-4">
+                {generalQuestions.map(renderQuestionCard)}
+              </AccordionContent>
+            </AccordionItem>
+          )}
 
-            return (
-              <Card key={question.id} className="p-6 bg-card">
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      {hasAnswered && <CheckCircle2 className="w-4 h-4 text-green-600" />}
-                      {question.is_mandatory && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground">
-                          Obligatoria
-                        </span>
-                      )}
-                      {question.scope === "specific" && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-                          {question.parties ? question.parties.name : question.teams.name}
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="text-lg font-semibold text-foreground">{question.text}</h3>
-                  </div>
+          {myAffiliationQuestions.length > 0 && (
+            <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <span className="text-lg font-bold text-foreground">
+                  Mi {module === "politica" ? "Partido" : "Equipo"}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 pb-4 space-y-4">
+                {myAffiliationQuestions.map(renderQuestionCard)}
+              </AccordionContent>
+            </AccordionItem>
+          )}
 
-                  {!hasAnswered ? (
-                    <div className="space-y-4">
-                      <RadioGroup
-                        value={answers[question.id] || ""}
-                        onValueChange={(value) => setAnswers((prev) => ({ ...prev, [question.id]: value }))}
-                      >
-                        {question.answer_options
-                          .sort((a: any, b: any) => a.option_order - b.option_order)
-                          .map((option: any) => (
-                            <div key={option.id} className="flex items-center space-x-2">
-                              <RadioGroupItem value={option.id} id={`${question.id}-${option.id}`} />
-                              <Label htmlFor={`${question.id}-${option.id}`} className="cursor-pointer">
-                                {option.text}
-                              </Label>
-                            </div>
-                          ))}
-                      </RadioGroup>
-                      <Button
-                        onClick={() => handleAnswer(question.id)}
-                        className="w-full"
-                        variant={module === "politica" ? "default" : "secondary"}
-                      >
-                        Enviar Respuesta
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-sm font-semibold text-foreground">
-                        Resultados ({question.results.total} respuestas):
-                      </p>
-                      {question.results.options.map((option: any) => (
-                        <div key={option.id} className="space-y-1">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-foreground">{option.text}</span>
-                            <span className="font-semibold text-foreground">{option.percentage}%</span>
-                          </div>
-                          <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                            <div
-                              className={`h-full transition-all ${module === "politica" ? "bg-primary" : "bg-secondary"}`}
-                              style={{ width: `${option.percentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <QuestionComments questionId={question.id} />
-              </Card>
-            );
-          })}
-        </div>
+          {otherQuestions.length > 0 && (
+            <AccordionItem value="others" className="border rounded-lg bg-card px-4">
+              <AccordionTrigger className="hover:no-underline py-4">
+                <span className="text-lg font-bold text-foreground">
+                  Otras Encuestas ({module === "politica" ? "Resto de Partidos" : "Resto de Equipos"})
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pt-4 pb-4 space-y-4">
+                {otherQuestions.map(renderQuestionCard)}
+              </AccordionContent>
+            </AccordionItem>
+          )}
+        </Accordion>
       ) : (
         <Card className="p-8 text-center bg-card">
           <p className="text-muted-foreground">No hay datos para esta semana</p>
