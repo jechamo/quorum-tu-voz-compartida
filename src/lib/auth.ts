@@ -29,7 +29,7 @@ export interface SignUpData {
 }
 
 export const signUp = async (data: SignUpData) => {
-  // 1. Validación
+  // 1. VALIDACIÓN DE SEGURIDAD ANTES DE ENVIAR NADA
   const validation = signUpSchema.safeParse(data);
   if (!validation.success) {
     throw new Error(validation.error.errors[0].message);
@@ -53,7 +53,7 @@ export const signUp = async (data: SignUpData) => {
   if (!authData.user) throw new Error("No se pudo crear el usuario");
 
   // ---------------------------------------------------------
-  // 3. LÓGICA DE ASIGNACIÓN POR DEFECTO (Anti-Fantasmas)
+  // 3. ASIGNACIÓN AUTOMÁTICA DE 'SIN EQUIPO' / 'APOLÍTICO'
   // ---------------------------------------------------------
   let finalPartyId = data.partyId;
   let finalTeamId = data.teamId;
@@ -75,25 +75,26 @@ export const signUp = async (data: SignUpData) => {
   }
   // ---------------------------------------------------------
 
-  // 4. Crear perfil
+  // 4. Crear perfil con los IDs corregidos (nunca NULL)
   const { error: profileError } = await supabase.from("profiles").insert({
     id: authData.user.id,
     phone: data.phone,
     username: data.username,
     gender: data.gender,
     age: data.age,
-    party_id: finalPartyId || null, // Ahora intentará no ser NULL
+    party_id: finalPartyId || null,
     team_id: finalTeamId || null,
     accepted_terms: data.acceptedTerms,
     accepted_terms_at: new Date().toISOString(),
   });
 
   if (profileError) {
+    // Si falla el perfil, borramos el usuario auth para no dejarlo corrupto
     await supabase.auth.signOut();
     throw profileError;
   }
 
-  // 5. Asignar rol
+  // 5. Asignar rol de usuario
   const { error: roleError } = await supabase.from("user_roles").insert({
     user_id: authData.user.id,
     role: "user",
