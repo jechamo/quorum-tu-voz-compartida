@@ -11,6 +11,45 @@ import { QuestionComments } from "./QuestionComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
+// --- RANKINGS PARA ORDENACIÓN ---
+const PARTY_RANKING: Record<string, number> = {
+  "Partido Popular": 1,
+  PSOE: 2,
+  VOX: 3,
+  Sumar: 4,
+  ERC: 5,
+  Junts: 6,
+  Bildu: 7,
+  PNV: 8,
+  Podemos: 9,
+  BNG: 10,
+  Compromís: 11,
+  Ciudadanos: 99,
+};
+
+const TEAM_RANKING: Record<string, number> = {
+  "FC Barcelona": 1,
+  "Real Madrid": 2,
+  "Villarreal CF": 3,
+  "Atlético de Madrid": 4,
+  "Real Betis": 5,
+  "RCD Espanyol": 6,
+  "Getafe CF": 7,
+  "Athletic Club": 8,
+  "Real Sociedad": 9,
+  "Rayo Vallecano": 10,
+  "Celta de Vigo": 11,
+  "Sevilla FC": 12,
+  "Deportivo Alavés": 13,
+  "RCD Mallorca": 14,
+  "Valencia CF": 15,
+  "CA Osasuna": 16,
+  "Girona FC": 17,
+  "UD Las Palmas": 18,
+  "CD Leganés": 19,
+  "Real Valladolid": 20,
+};
+
 interface WeeklyHistoryProps {
   module: "politica" | "futbol";
   userId: string;
@@ -25,9 +64,11 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [userAnswers, setUserAnswers] = useState<{ [key: string]: string }>({});
   const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Estado de filtros MultiSelect
   const [filters, setFilters] = useState<FilterState>({
-    partyId: null,
-    teamId: null,
+    partyIds: [],
+    teamIds: [],
     gender: null,
     ageMin: null,
     ageMax: null,
@@ -95,10 +136,14 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
       const questionsWithResults = await Promise.all(
         questions.map(async (question) => {
+          // Arrays para la RPC
+          const partyIdsParam = filters.partyIds && filters.partyIds.length > 0 ? filters.partyIds : null;
+          const teamIdsParam = filters.teamIds && filters.teamIds.length > 0 ? filters.teamIds : null;
+
           const { data: statsData } = await supabase.rpc("get_question_stats_filtered", {
             question_uuid: question.id,
-            filter_party_id: filters.partyId,
-            filter_team_id: filters.teamId,
+            filter_party_ids: partyIdsParam,
+            filter_team_ids: teamIdsParam,
             filter_gender: filters.gender as any,
             filter_age_min: filters.ageMin,
             filter_age_max: filters.ageMax,
@@ -146,11 +191,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   const handleAnswer = async (questionId: string) => {
     const answerId = answers[questionId];
     if (!answerId) {
-      toast({
-        title: "Error",
-        description: "Por favor selecciona una respuesta",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Por favor selecciona una respuesta", variant: "destructive" });
       return;
     }
 
@@ -163,24 +204,17 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
       if (error) throw error;
 
-      toast({
-        title: "¡Respuesta enviada!",
-        description: "Tu respuesta ha sido registrada correctamente",
-      });
+      toast({ title: "¡Respuesta enviada!", description: "Tu respuesta ha sido registrada correctamente" });
 
       if (selectedWeek) {
         loadWeekData(selectedWeek);
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo enviar la respuesta",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo enviar la respuesta", variant: "destructive" });
     }
   };
 
-  // Grouping Logic
+  // Lógica de Agrupación y Ordenación
   const questionsList = weekData || [];
 
   const generalQuestions = questionsList.filter((q: any) => q.scope === "general");
@@ -196,10 +230,12 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
     (q: any) => !generalQuestions.includes(q) && !myAffiliationQuestions.includes(q),
   );
 
-  // Placeholder sort
   otherQuestions.sort((a: any, b: any) => {
     const nameA = a.parties?.name || a.teams?.name || "";
     const nameB = b.parties?.name || b.teams?.name || "";
+    const rankA = (module === "politica" ? PARTY_RANKING[nameA] : TEAM_RANKING[nameA]) || 999;
+    const rankB = (module === "politica" ? PARTY_RANKING[nameB] : TEAM_RANKING[nameB]) || 999;
+    if (rankA !== rankB) return rankA - rankB;
     return nameA.localeCompare(nameB);
   });
 
@@ -207,7 +243,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
     const hasAnswered = !!userAnswers[question.id];
 
     return (
-      <Card key={question.id} className="p-6 bg-card">
+      <Card key={question.id} className="p-6 bg-card shadow-sm border">
         <div className="space-y-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
@@ -308,7 +344,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
       {weekData && weekData.length > 0 ? (
         <Accordion type="multiple" defaultValue={["general", "my-affiliation", "others"]} className="space-y-4">
           {generalQuestions.length > 0 && (
-            <AccordionItem value="general" className="border rounded-lg bg-card px-4">
+            <AccordionItem value="general" className="border rounded-lg bg-card px-4 shadow-sm">
               <AccordionTrigger className="hover:no-underline py-4">
                 <span className="text-lg font-bold text-foreground">Preguntas Generales</span>
               </AccordionTrigger>
@@ -319,7 +355,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
           )}
 
           {myAffiliationQuestions.length > 0 && (
-            <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4">
+            <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4 shadow-sm">
               <AccordionTrigger className="hover:no-underline py-4">
                 <span className="text-lg font-bold text-foreground">
                   Mi {module === "politica" ? "Partido" : "Equipo"}
@@ -332,7 +368,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
           )}
 
           {otherQuestions.length > 0 && (
-            <AccordionItem value="others" className="border rounded-lg bg-card px-4">
+            <AccordionItem value="others" className="border rounded-lg bg-card px-4 shadow-sm">
               <AccordionTrigger className="hover:no-underline py-4">
                 <span className="text-lg font-bold text-foreground">
                   Otras Encuestas ({module === "politica" ? "Resto de Partidos" : "Resto de Equipos"})

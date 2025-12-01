@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Info } from "lucide-react";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 interface StatsFiltersProps {
   module: "politica" | "futbol";
@@ -11,8 +12,8 @@ interface StatsFiltersProps {
 }
 
 export interface FilterState {
-  partyId: string | null;
-  teamId: string | null;
+  partyIds: string[]; // <-- CAMBIO A ARRAY
+  teamIds: string[]; // <-- CAMBIO A ARRAY
   gender: string | null;
   ageMin: number | null;
   ageMax: number | null;
@@ -31,9 +32,11 @@ const AGE_RANGES = [
 export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => {
   const [parties, setParties] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+
+  // Estado inicial con arrays vacíos
   const [filters, setFilters] = useState<FilterState>({
-    partyId: null,
-    teamId: null,
+    partyIds: [],
+    teamIds: [],
     gender: null,
     ageMin: null,
     ageMax: null,
@@ -54,7 +57,6 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
       return;
     }
     onFiltersChange(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const loadParties = async () => {
@@ -84,45 +86,25 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {module === "politica" && (
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Partido Político</Label>
-            <Select
-              value={filters.partyId || "all"}
-              onValueChange={(value) => setFilters((prev) => ({ ...prev, partyId: value === "all" ? null : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {parties.map((party) => (
-                  <SelectItem key={party.id} value={party.id}>
-                    {party.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-sm font-medium">Partidos Políticos</Label>
+            <MultiSelect
+              options={parties.map((p) => ({ label: p.name, value: p.id }))}
+              selected={filters.partyIds}
+              onChange={(selected) => setFilters((prev) => ({ ...prev, partyIds: selected }))}
+              placeholder="Selecciona partidos..."
+            />
           </div>
         )}
 
         {module === "futbol" && (
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Equipo de Fútbol</Label>
-            <Select
-              value={filters.teamId || "all"}
-              onValueChange={(value) => setFilters((prev) => ({ ...prev, teamId: value === "all" ? null : value }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {teams.map((team) => (
-                  <SelectItem key={team.id} value={team.id}>
-                    {team.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label className="text-sm font-medium">Equipos de Fútbol</Label>
+            <MultiSelect
+              options={teams.map((t) => ({ label: t.name, value: t.id }))}
+              selected={filters.teamIds}
+              onChange={(selected) => setFilters((prev) => ({ ...prev, teamIds: selected }))}
+              placeholder="Selecciona equipos..."
+            />
           </div>
         )}
 

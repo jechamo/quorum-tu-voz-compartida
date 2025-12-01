@@ -11,6 +11,46 @@ import { StatsFilters, FilterState } from "./StatsFilters";
 import { QuestionComments } from "./QuestionComments";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
+// --- RANKINGS PARA ORDENACIÓN (Datos Reales 2025) ---
+const PARTY_RANKING: Record<string, number> = {
+  "Partido Popular": 1, // 137 escaños
+  PSOE: 2, // 120 escaños
+  VOX: 3, // 33 escaños
+  Sumar: 4, // 26 escaños
+  ERC: 5, // 7 escaños
+  Junts: 6, // 7 escaños
+  Bildu: 7, // 6 escaños
+  PNV: 8, // 5 escaños
+  Podemos: 9, // 4 escaños
+  BNG: 10, // 1 escaño
+  Compromís: 11,
+  Ciudadanos: 99,
+};
+
+const TEAM_RANKING: Record<string, number> = {
+  // Basado en clasificación La Liga 24/25 (Top actual)
+  "FC Barcelona": 1,
+  "Real Madrid": 2,
+  "Villarreal CF": 3,
+  "Atlético de Madrid": 4,
+  "Real Betis": 5,
+  "RCD Espanyol": 6,
+  "Getafe CF": 7,
+  "Athletic Club": 8,
+  "Real Sociedad": 9,
+  "Rayo Vallecano": 10,
+  "Celta de Vigo": 11,
+  "Sevilla FC": 12,
+  "Deportivo Alavés": 13,
+  "RCD Mallorca": 14,
+  "Valencia CF": 15,
+  "CA Osasuna": 16,
+  "Girona FC": 17,
+  "UD Las Palmas": 18,
+  "CD Leganés": 19,
+  "Real Valladolid": 20,
+};
+
 interface WeeklySurveysProps {
   module: "politica" | "futbol";
   userId: string;
@@ -23,9 +63,11 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   const [results, setResults] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+
+  // Estado de filtros (Ahora soporta arrays para MultiSelect)
   const [filters, setFilters] = useState<FilterState>({
-    partyId: null,
-    teamId: null,
+    partyIds: [],
+    teamIds: [],
     gender: null,
     ageMin: null,
     ageMax: null,
@@ -42,6 +84,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   }, [module, userId]);
 
   useEffect(() => {
+    // Recargar resultados cuando cambian los filtros (si el usuario ya respondió)
     Object.keys(userAnswers).forEach((questionId) => {
       loadResults(questionId);
     });
@@ -83,10 +126,14 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   };
 
   const loadResults = async (questionId: string) => {
+    // Preparar arrays para la RPC (null si están vacíos para que signifique 'todos')
+    const partyIdsParam = filters.partyIds && filters.partyIds.length > 0 ? filters.partyIds : null;
+    const teamIdsParam = filters.teamIds && filters.teamIds.length > 0 ? filters.teamIds : null;
+
     const { data: statsData, error } = await supabase.rpc("get_question_stats_filtered", {
       question_uuid: questionId,
-      filter_party_id: filters.partyId,
-      filter_team_id: filters.teamId,
+      filter_party_ids: partyIdsParam, // <--- Usamos el parámetro plural (Array)
+      filter_team_ids: teamIdsParam, // <--- Usamos el parámetro plural (Array)
       filter_gender: filters.gender as any,
       filter_age_min: filters.ageMin,
       filter_age_max: filters.ageMax,
@@ -133,9 +180,12 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
     }
   };
 
-  // Lógica de Agrupación
+  // --- LÓGICA DE AGRUPACIÓN Y ORDENACIÓN ---
+
+  // 1. Generales (Sin etiqueta)
   const generalQuestions = questions.filter((q) => q.scope === "general");
 
+  // 2. Mi Afiliación (Coincide con el perfil del usuario)
   const myAffiliationQuestions = questions.filter((q) => {
     if (q.scope !== "specific") return false;
     if (module === "politica") return q.party_id === userProfile?.party_id;
@@ -143,13 +193,21 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
     return false;
   });
 
+  // 3. Otros (Resto de equipos/partidos)
   const otherQuestions = questions.filter((q) => !generalQuestions.includes(q) && !myAffiliationQuestions.includes(q));
 
-  // Ordenar "Otros" alfabéticamente (ya que no tenemos columna 'escaños' en BD)
+  // ORDENAR OTROS: Por escaños (política) o clasificación (fútbol)
   otherQuestions.sort((a, b) => {
     const nameA = a.parties?.name || a.teams?.name || "";
     const nameB = b.parties?.name || b.teams?.name || "";
-    return nameA.localeCompare(nameB);
+
+    const rankA = (module === "politica" ? PARTY_RANKING[nameA] : TEAM_RANKING[nameA]) || 999;
+    const rankB = (module === "politica" ? PARTY_RANKING[nameB] : TEAM_RANKING[nameB]) || 999;
+
+    if (rankA !== rankB) {
+      return rankA - rankB; // Menor número = Mejor ranking (1º, 2º, 3º...)
+    }
+    return nameA.localeCompare(nameB); // Desempate alfabético
   });
 
   const renderQuestionCard = (question: any) => {
@@ -157,7 +215,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
     const result = results[question.id];
 
     return (
-      <Card key={question.id} className="p-6 bg-card">
+      <Card key={question.id} className="p-6 bg-card shadow-sm border">
         <div className="space-y-4">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -225,6 +283,8 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
             </div>
           )}
         </div>
+
+        {/* COMENTARIOS: Bloque colapsable integrado en la tarjeta */}
         <QuestionComments questionId={question.id} />
       </Card>
     );
@@ -247,12 +307,14 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
         </span>
       </div>
 
+      {/* Filtros Multiselect */}
       <StatsFilters module={module} onFiltersChange={setFilters} />
 
+      {/* ACORDEÓN DE 3 BLOQUES */}
       <Accordion type="multiple" defaultValue={["general", "my-affiliation", "others"]} className="space-y-4">
-        {/* BLOQUE 1: GENERAL */}
+        {/* 1. GENERAL */}
         {generalQuestions.length > 0 && (
-          <AccordionItem value="general" className="border rounded-lg bg-card px-4">
+          <AccordionItem value="general" className="border rounded-lg bg-card px-4 shadow-sm">
             <AccordionTrigger className="hover:no-underline py-4">
               <span className="text-lg font-bold text-foreground">Preguntas Generales</span>
             </AccordionTrigger>
@@ -262,9 +324,9 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
           </AccordionItem>
         )}
 
-        {/* BLOQUE 2: MI AFILIACIÓN */}
+        {/* 2. MI PARTIDO/EQUIPO */}
         {myAffiliationQuestions.length > 0 && (
-          <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4">
+          <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4 shadow-sm">
             <AccordionTrigger className="hover:no-underline py-4">
               <span className="text-lg font-bold text-foreground">
                 Mi {module === "politica" ? "Partido" : "Equipo"}
@@ -276,9 +338,9 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
           </AccordionItem>
         )}
 
-        {/* BLOQUE 3: OTROS */}
+        {/* 3. RESTO (ORDENADO POR ESCAÑOS/LIGA) */}
         {otherQuestions.length > 0 && (
-          <AccordionItem value="others" className="border rounded-lg bg-card px-4">
+          <AccordionItem value="others" className="border rounded-lg bg-card px-4 shadow-sm">
             <AccordionTrigger className="hover:no-underline py-4">
               <span className="text-lg font-bold text-foreground">
                 Otras Encuestas ({module === "politica" ? "Resto de Partidos" : "Resto de Equipos"})
