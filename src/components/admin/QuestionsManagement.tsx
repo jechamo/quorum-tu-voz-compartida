@@ -14,6 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // <--- IMPORTAR
+import { PARTY_LOGOS, TEAM_LOGOS } from "@/lib/logos"; // <--- IMPORTAR
 
 export const QuestionsManagement = () => {
   const [questions, setQuestions] = useState<any[]>([]);
@@ -38,7 +40,6 @@ export const QuestionsManagement = () => {
   }, []);
 
   const loadQuestions = async () => {
-    const today = new Date().toISOString().split("T")[0];
     const { data } = await supabase
       .from("questions")
       .select("*, parties(name), teams(name), answer_options(*)")
@@ -62,11 +63,7 @@ export const QuestionsManagement = () => {
 
   const handleRemoveOption = (index: number) => {
     if (options.length <= 2) {
-      toast({
-        title: "Error",
-        description: "Debe haber al menos 2 opciones",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Debe haber al menos 2 opciones", variant: "destructive" });
       return;
     }
     setOptions(options.filter((_, i) => i !== index));
@@ -88,57 +85,18 @@ export const QuestionsManagement = () => {
   };
 
   const handleSubmit = async () => {
-    if (!questionText.trim()) {
-      toast({
-        title: "Error",
-        description: "La pregunta no puede estar vacía",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!weekStartDate) {
-      toast({
-        title: "Error",
-        description: "Selecciona una fecha",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!questionText.trim() || !weekStartDate) return;
     const filledOptions = options.filter((o) => o.trim());
-    if (filledOptions.length < 2) {
-      toast({
-        title: "Error",
-        description: "Debe haber al menos 2 opciones con texto",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (filledOptions.length < 2) return;
 
     if (scope === "specific") {
-      if (module === "politica" && !selectedParty) {
-        toast({
-          title: "Error",
-          description: "Selecciona un partido para pregunta específica",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (module === "futbol" && !selectedTeam) {
-        toast({
-          title: "Error",
-          description: "Selecciona un equipo para pregunta específica",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (module === "politica" && !selectedParty) return;
+      if (module === "futbol" && !selectedTeam) return;
     }
 
     setLoading(true);
     try {
       const formattedDate = format(weekStartDate, "yyyy-MM-dd");
-
       const questionData: any = {
         text: questionText.trim(),
         module,
@@ -148,15 +106,11 @@ export const QuestionsManagement = () => {
       };
 
       if (scope === "specific") {
-        if (module === "politica") {
-          questionData.party_id = selectedParty;
-        } else {
-          questionData.team_id = selectedTeam;
-        }
+        if (module === "politica") questionData.party_id = selectedParty;
+        else questionData.team_id = selectedTeam;
       }
 
       const { data: question, error: qError } = await supabase.from("questions").insert(questionData).select().single();
-
       if (qError) throw qError;
 
       const answerOptions = filledOptions.map((text, index) => ({
@@ -168,10 +122,7 @@ export const QuestionsManagement = () => {
       const { error: oError } = await supabase.from("answer_options").insert(answerOptions);
       if (oError) throw oError;
 
-      toast({
-        title: "Pregunta creada",
-        description: "La pregunta ha sido creada correctamente",
-      });
+      toast({ title: "Pregunta creada", description: "La pregunta ha sido creada correctamente" });
 
       setQuestionText("");
       setScope("general");
@@ -181,11 +132,7 @@ export const QuestionsManagement = () => {
       setOptions(["", ""]);
       loadQuestions();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo crear la pregunta",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -193,23 +140,13 @@ export const QuestionsManagement = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar esta pregunta?")) return;
-
     setLoading(true);
     try {
       const { error } = await supabase.from("questions").delete().eq("id", id);
       if (error) throw error;
-
-      toast({
-        title: "Pregunta eliminada",
-        description: "La pregunta ha sido eliminada",
-      });
       loadQuestions();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "No se pudo eliminar la pregunta",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -221,7 +158,6 @@ export const QuestionsManagement = () => {
         <h3 className="font-display font-semibold text-lg mb-4">Crear Nueva Pregunta</h3>
 
         <div className="space-y-4">
-          {/* RESPONSIVE: 1 columna en móvil, 2 en PC */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="module">Módulo</Label>
@@ -243,7 +179,7 @@ export const QuestionsManagement = () => {
                   <Button
                     variant={"outline"}
                     className={cn(
-                      "w-full justify-start text-left font-normal truncate", // Truncate para textos largos
+                      "w-full justify-start text-left font-normal truncate",
                       !weekStartDate && "text-muted-foreground",
                     )}
                   >
@@ -265,9 +201,7 @@ export const QuestionsManagement = () => {
                   />
                 </PopoverContent>
               </Popover>
-              <p className="text-xs text-muted-foreground">
-                Se ajustará automáticamente al lunes de la semana seleccionada
-              </p>
+              <p className="text-xs text-muted-foreground">Se ajustará automáticamente al lunes</p>
             </div>
           </div>
 
@@ -281,7 +215,6 @@ export const QuestionsManagement = () => {
             />
           </div>
 
-          {/* RESPONSIVE: 1 columna en móvil, 2 en PC */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="scope">Tipo</Label>
@@ -306,7 +239,13 @@ export const QuestionsManagement = () => {
                   <SelectContent>
                     {parties.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.name}
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={PARTY_LOGOS[p.name]} />
+                            <AvatarFallback>{p.name[0]}</AvatarFallback>
+                          </Avatar>
+                          {p.name}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -324,7 +263,13 @@ export const QuestionsManagement = () => {
                   <SelectContent>
                     {teams.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
-                        {t.name}
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarImage src={TEAM_LOGOS[t.name]} />
+                            <AvatarFallback>{t.name[0]}</AvatarFallback>
+                          </Avatar>
+                          {t.name}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -366,8 +311,7 @@ export const QuestionsManagement = () => {
               </div>
             ))}
             <Button variant="outline" onClick={handleAddOption} size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              Añadir opción
+              <Plus className="w-4 h-4 mr-2" /> Añadir opción
             </Button>
           </div>
 
@@ -400,9 +344,17 @@ export const QuestionsManagement = () => {
                 </div>
                 <p className="font-medium text-foreground">{q.text}</p>
                 {q.scope === "specific" && (
-                  <p className="text-sm text-muted-foreground">
-                    {q.parties ? `Partido: ${q.parties.name}` : `Equipo: ${q.teams.name}`}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm text-muted-foreground">
+                      {q.parties ? `Partido: ${q.parties.name}` : `Equipo: ${q.teams.name}`}
+                    </span>
+                    {/* Logo en lista de existentes */}
+                    {(q.parties || q.teams) && (
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={q.parties ? PARTY_LOGOS[q.parties.name] : TEAM_LOGOS[q.teams.name]} />
+                      </Avatar>
+                    )}
+                  </div>
                 )}
                 <div className="mt-2 space-y-1">
                   {q.answer_options?.map((opt: any) => (
