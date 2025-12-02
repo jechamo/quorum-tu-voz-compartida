@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, LayoutGrid, User } from "lucide-react";
 import { getCurrentWeekStart } from "@/lib/dateUtils";
 import { StatsFilters, FilterState, AGE_RANGES } from "./StatsFilters";
 import { QuestionComments } from "./QuestionComments";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PARTY_LOGOS, TEAM_LOGOS } from "@/lib/logos";
 
-// --- RANKINGS ---
+// --- RANKINGS PARA ORDENACIÓN ---
 const PARTY_RANKING: Record<string, number> = {
   "Partido Popular": 1,
   PSOE: 2,
@@ -23,8 +25,9 @@ const PARTY_RANKING: Record<string, number> = {
   PNV: 8,
   Podemos: 9,
   BNG: 10,
-  Compromís: 11,
-  Ciudadanos: 99,
+  "Coalición Canaria": 11,
+  UPN: 12,
+  "Ninguno/Apolítico": 99,
 };
 
 const TEAM_RANKING: Record<string, number> = {
@@ -48,6 +51,7 @@ const TEAM_RANKING: Record<string, number> = {
   "UD Las Palmas": 18,
   "CD Leganés": 19,
   "Real Valladolid": 20,
+  "Libre/Sin equipo": 99,
 };
 
 interface WeeklySurveysProps {
@@ -62,19 +66,31 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   const [results, setResults] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [userAffiliationName, setUserAffiliationName] = useState(""); // Para el título del bloque "Mi Partido"
 
   const [filters, setFilters] = useState<FilterState>({
     partyIds: [],
     teamIds: [],
     gender: null,
-    ageRanges: [], // Multi-select edad
+    ageRanges: [],
   });
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data } = await supabase.from("profiles").select("party_id, team_id").eq("id", userId).single();
+      const { data } = await supabase
+        .from("profiles")
+        .select("party_id, team_id, parties(name), teams(name)")
+        .eq("id", userId)
+        .single();
+
       setUserProfile(data);
+
+      // Guardar nombre de afiliación para mostrar en el título
+      if (data) {
+        if (module === "politica" && data.parties) setUserAffiliationName(data.parties.name);
+        else if (module === "futbol" && data.teams) setUserAffiliationName(data.teams.name);
+      }
     };
     fetchProfile();
     loadWeeklyQuestions();
@@ -118,11 +134,8 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
   };
 
   const loadResults = async (questionId: string) => {
-    // 1. Preparar Arrays de IDs
     const partyIdsParam = filters.partyIds.length > 0 ? filters.partyIds : null;
     const teamIdsParam = filters.teamIds.length > 0 ? filters.teamIds : null;
-
-    // 2. Preparar Arrays de Edad (Mins y Maxs)
     let ageMins: number[] | null = null;
     let ageMaxs: number[] | null = null;
 
@@ -143,8 +156,8 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
       filter_party_ids: partyIdsParam,
       filter_team_ids: teamIdsParam,
       filter_gender: filters.gender as any,
-      filter_age_mins: ageMins, // Nueva firma SQL
-      filter_age_maxs: ageMaxs, // Nueva firma SQL
+      filter_age_mins: ageMins,
+      filter_age_maxs: ageMaxs,
     });
 
     if (statsData && !error) {
@@ -166,6 +179,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
       toast({ title: "Error", description: "Selecciona una opción", variant: "destructive" });
       return;
     }
+
     setLoading(true);
     try {
       const { error } = await supabase.from("user_answers").insert({
@@ -184,7 +198,7 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
     }
   };
 
-  // --- ORDENACIÓN Y AGRUPACIÓN ---
+  // --- LÓGICA DE AGRUPACIÓN ---
   const generalQuestions = questions.filter((q) => q.scope === "general");
 
   const myAffiliationQuestions = questions.filter((q) => {
@@ -203,6 +217,23 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
     const rankB = (module === "politica" ? PARTY_RANKING[nameB] : TEAM_RANKING[nameB]) || 999;
     if (rankA !== rankB) return rankA - rankB;
     return nameA.localeCompare(nameB);
+  });
+
+  // Agrupamos "Otros" por nombre de entidad para poder mostrar cabeceras con logo
+  // Estructura: { "PSOE": [q1, q2], "VOX": [q3] }
+  const groupedOthers: Record<string, any[]> = {};
+  otherQuestions.forEach((q) => {
+    const name = q.parties?.name || q.teams?.name || "Desconocido";
+    if (!groupedOthers[name]) groupedOthers[name] = [];
+    groupedOthers[name].push(q);
+  });
+
+  // Convertimos a array ordenado para renderizar
+  const sortedGroupNames = Object.keys(groupedOthers).sort((a, b) => {
+    const rankA = (module === "politica" ? PARTY_RANKING[a] : TEAM_RANKING[a]) || 999;
+    const rankB = (module === "politica" ? PARTY_RANKING[b] : TEAM_RANKING[b]) || 999;
+    if (rankA !== rankB) return rankA - rankB;
+    return a.localeCompare(b);
   });
 
   const renderQuestionCard = (question: any) => {
@@ -301,41 +332,65 @@ export const WeeklySurveys = ({ module, userId }: WeeklySurveysProps) => {
 
       <StatsFilters module={module} onFiltersChange={setFilters} />
 
-      <Accordion type="multiple" defaultValue={["general", "my-affiliation", "others"]} className="space-y-4">
+      <Accordion type="multiple" defaultValue={["general", "my-affiliation"]} className="space-y-4">
+        {/* 1. GENERAL */}
         {generalQuestions.length > 0 && (
           <AccordionItem value="general" className="border rounded-lg bg-card px-4 shadow-sm">
             <AccordionTrigger className="hover:no-underline py-4">
-              <span className="text-lg font-bold text-foreground">Preguntas Generales</span>
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                  <LayoutGrid className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <span className="text-lg font-bold text-foreground">Preguntas Generales</span>
+              </div>
             </AccordionTrigger>
             <AccordionContent className="pt-4 pb-4 space-y-4">
               {generalQuestions.map(renderQuestionCard)}
             </AccordionContent>
           </AccordionItem>
         )}
+
+        {/* 2. MI PARTIDO */}
         {myAffiliationQuestions.length > 0 && (
           <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4 shadow-sm">
             <AccordionTrigger className="hover:no-underline py-4">
-              <span className="text-lg font-bold text-foreground">
-                Mi {module === "politica" ? "Partido" : "Equipo"}
-              </span>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    src={module === "politica" ? PARTY_LOGOS[userAffiliationName] : TEAM_LOGOS[userAffiliationName]}
+                  />
+                  <AvatarFallback>
+                    <User className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-lg font-bold text-foreground">
+                  Mi {module === "politica" ? "Partido" : "Equipo"} ({userAffiliationName})
+                </span>
+              </div>
             </AccordionTrigger>
             <AccordionContent className="pt-4 pb-4 space-y-4">
               {myAffiliationQuestions.map(renderQuestionCard)}
             </AccordionContent>
           </AccordionItem>
         )}
-        {otherQuestions.length > 0 && (
-          <AccordionItem value="others" className="border rounded-lg bg-card px-4 shadow-sm">
+
+        {/* 3. RESTO (Agrupado por Partido/Equipo con Logo) */}
+        {sortedGroupNames.map((groupName, idx) => (
+          <AccordionItem key={groupName} value={`other-${idx}`} className="border rounded-lg bg-card px-4 shadow-sm">
             <AccordionTrigger className="hover:no-underline py-4">
-              <span className="text-lg font-bold text-foreground">
-                Otras Encuestas ({module === "politica" ? "Resto de Partidos" : "Resto de Equipos"})
-              </span>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={module === "politica" ? PARTY_LOGOS[groupName] : TEAM_LOGOS[groupName]} />
+                  <AvatarFallback>{groupName.substring(0, 2)}</AvatarFallback>
+                </Avatar>
+                <span className="text-lg font-bold text-foreground">{groupName}</span>
+              </div>
             </AccordionTrigger>
             <AccordionContent className="pt-4 pb-4 space-y-4">
-              {otherQuestions.map(renderQuestionCard)}
+              {groupedOthers[groupName].map(renderQuestionCard)}
             </AccordionContent>
           </AccordionItem>
-        )}
+        ))}
       </Accordion>
     </div>
   );

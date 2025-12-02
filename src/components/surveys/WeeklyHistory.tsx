@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, CheckCircle2, LayoutGrid, User } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { StatsFilters, FilterState, AGE_RANGES } from "./StatsFilters";
@@ -10,8 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { QuestionComments } from "./QuestionComments";
 import { useAuth } from "@/contexts/AuthContext";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PARTY_LOGOS, TEAM_LOGOS } from "@/lib/logos";
 
-// --- RANKINGS (Mismos que en WeeklySurveys) ---
+// --- RANKINGS (Idénticos) ---
 const PARTY_RANKING: Record<string, number> = {
   "Partido Popular": 1,
   PSOE: 2,
@@ -23,8 +25,9 @@ const PARTY_RANKING: Record<string, number> = {
   PNV: 8,
   Podemos: 9,
   BNG: 10,
-  Compromís: 11,
-  Ciudadanos: 99,
+  "Coalición Canaria": 11,
+  UPN: 12,
+  "Ninguno/Apolítico": 99,
 };
 
 const TEAM_RANKING: Record<string, number> = {
@@ -48,6 +51,7 @@ const TEAM_RANKING: Record<string, number> = {
   "UD Las Palmas": 18,
   "CD Leganés": 19,
   "Real Valladolid": 20,
+  "Libre/Sin equipo": 99,
 };
 
 interface WeeklyHistoryProps {
@@ -64,6 +68,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
   const [answers, setAnswers] = useState<{ [key: string]: string }>({});
   const [userAnswers, setUserAnswers] = useState<{ [key: string]: string }>({});
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [userAffiliationName, setUserAffiliationName] = useState("");
 
   const [filters, setFilters] = useState<FilterState>({
     partyIds: [],
@@ -74,17 +79,23 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data } = await supabase.from("profiles").select("party_id, team_id").eq("id", userId).single();
+      const { data } = await supabase
+        .from("profiles")
+        .select("party_id, team_id, parties(name), teams(name)")
+        .eq("id", userId)
+        .single();
       setUserProfile(data);
+      if (data) {
+        if (module === "politica" && data.parties) setUserAffiliationName(data.parties.name);
+        else if (module === "futbol" && data.teams) setUserAffiliationName(data.teams.name);
+      }
     };
     fetchProfile();
     loadWeeks();
   }, [module, isAdmin, userId]);
 
   useEffect(() => {
-    if (selectedWeek) {
-      loadWeekData(selectedWeek);
-    }
+    if (selectedWeek) loadWeekData(selectedWeek);
   }, [selectedWeek, filters]);
 
   const loadWeeks = async () => {
@@ -131,10 +142,8 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
       const questionsWithResults = await Promise.all(
         questions.map(async (question) => {
-          // Prepare params for RPC
           const partyIdsParam = filters.partyIds.length > 0 ? filters.partyIds : null;
           const teamIdsParam = filters.teamIds.length > 0 ? filters.teamIds : null;
-
           let ageMins: number[] | null = null;
           let ageMaxs: number[] | null = null;
           if (filters.ageRanges.length > 0) {
@@ -171,7 +180,6 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
           return { ...question, results: { options, total } };
         }),
       );
-
       setWeekData(questionsWithResults);
     }
   };
@@ -209,7 +217,7 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
     }
   };
 
-  // Grouping & Sorting Logic (Identical to WeeklySurveys)
+  // --- AGRUPACIÓN ---
   const questionsList = weekData || [];
   const generalQuestions = questionsList.filter((q: any) => q.scope === "general");
   const myAffiliationQuestions = questionsList.filter((q: any) => {
@@ -222,13 +230,19 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
     (q: any) => !generalQuestions.includes(q) && !myAffiliationQuestions.includes(q),
   );
 
-  otherQuestions.sort((a: any, b: any) => {
-    const nameA = a.parties?.name || a.teams?.name || "";
-    const nameB = b.parties?.name || b.teams?.name || "";
-    const rankA = (module === "politica" ? PARTY_RANKING[nameA] : TEAM_RANKING[nameA]) || 999;
-    const rankB = (module === "politica" ? PARTY_RANKING[nameB] : TEAM_RANKING[nameB]) || 999;
+  // Agrupamos "Otros"
+  const groupedOthers: Record<string, any[]> = {};
+  otherQuestions.forEach((q: any) => {
+    const name = q.parties?.name || q.teams?.name || "Desconocido";
+    if (!groupedOthers[name]) groupedOthers[name] = [];
+    groupedOthers[name].push(q);
+  });
+
+  const sortedGroupNames = Object.keys(groupedOthers).sort((a, b) => {
+    const rankA = (module === "politica" ? PARTY_RANKING[a] : TEAM_RANKING[a]) || 999;
+    const rankB = (module === "politica" ? PARTY_RANKING[b] : TEAM_RANKING[b]) || 999;
     if (rankA !== rankB) return rankA - rankB;
-    return nameA.localeCompare(nameB);
+    return a.localeCompare(b);
   });
 
   const renderQuestionCard = (question: any) => {
@@ -328,48 +342,66 @@ export const WeeklyHistory = ({ module, userId }: WeeklyHistoryProps) => {
 
       <StatsFilters module={module} onFiltersChange={setFilters} />
 
-      {weekData && weekData.length > 0 ? (
-        <Accordion type="multiple" defaultValue={["general", "my-affiliation", "others"]} className="space-y-4">
-          {generalQuestions.length > 0 && (
-            <AccordionItem value="general" className="border rounded-lg bg-card px-4 shadow-sm">
-              <AccordionTrigger className="hover:no-underline py-4">
+      <Accordion type="multiple" defaultValue={["general", "my-affiliation"]} className="space-y-4">
+        {/* 1. GENERAL */}
+        {generalQuestions.length > 0 && (
+          <AccordionItem value="general" className="border rounded-lg bg-card px-4 shadow-sm">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                  <LayoutGrid className="h-5 w-5 text-muted-foreground" />
+                </div>
                 <span className="text-lg font-bold text-foreground">Preguntas Generales</span>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 pb-4 space-y-4">
-                {generalQuestions.map(renderQuestionCard)}
-              </AccordionContent>
-            </AccordionItem>
-          )}
-          {myAffiliationQuestions.length > 0 && (
-            <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4 shadow-sm">
-              <AccordionTrigger className="hover:no-underline py-4">
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-4 pb-4 space-y-4">
+              {generalQuestions.map(renderQuestionCard)}
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* 2. MI PARTIDO */}
+        {myAffiliationQuestions.length > 0 && (
+          <AccordionItem value="my-affiliation" className="border rounded-lg bg-card px-4 shadow-sm">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    src={module === "politica" ? PARTY_LOGOS[userAffiliationName] : TEAM_LOGOS[userAffiliationName]}
+                  />
+                  <AvatarFallback>
+                    <User className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
                 <span className="text-lg font-bold text-foreground">
-                  Mi {module === "politica" ? "Partido" : "Equipo"}
+                  Mi {module === "politica" ? "Partido" : "Equipo"} ({userAffiliationName})
                 </span>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 pb-4 space-y-4">
-                {myAffiliationQuestions.map(renderQuestionCard)}
-              </AccordionContent>
-            </AccordionItem>
-          )}
-          {otherQuestions.length > 0 && (
-            <AccordionItem value="others" className="border rounded-lg bg-card px-4 shadow-sm">
-              <AccordionTrigger className="hover:no-underline py-4">
-                <span className="text-lg font-bold text-foreground">
-                  Otras Encuestas ({module === "politica" ? "Resto de Partidos" : "Resto de Equipos"})
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="pt-4 pb-4 space-y-4">
-                {otherQuestions.map(renderQuestionCard)}
-              </AccordionContent>
-            </AccordionItem>
-          )}
-        </Accordion>
-      ) : (
-        <Card className="p-8 text-center bg-card">
-          <p className="text-muted-foreground">No hay datos para esta semana</p>
-        </Card>
-      )}
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-4 pb-4 space-y-4">
+              {myAffiliationQuestions.map(renderQuestionCard)}
+            </AccordionContent>
+          </AccordionItem>
+        )}
+
+        {/* 3. RESTO */}
+        {sortedGroupNames.map((groupName, idx) => (
+          <AccordionItem key={groupName} value={`other-${idx}`} className="border rounded-lg bg-card px-4 shadow-sm">
+            <AccordionTrigger className="hover:no-underline py-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={module === "politica" ? PARTY_LOGOS[groupName] : TEAM_LOGOS[groupName]} />
+                  <AvatarFallback>{groupName.substring(0, 2)}</AvatarFallback>
+                </Avatar>
+                <span className="text-lg font-bold text-foreground">{groupName}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pt-4 pb-4 space-y-4">
+              {groupedOthers[groupName].map(renderQuestionCard)}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 };
