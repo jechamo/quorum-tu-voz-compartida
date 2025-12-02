@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus } from "lucide-react";
+import { Plus, Trash2, Flag } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // <--- Avatar
+import { PARTY_LOGOS } from "@/lib/logos"; // <--- Logos
 
 export const PartiesManagement = () => {
   const [parties, setParties] = useState<any[]>([]);
@@ -18,11 +20,11 @@ export const PartiesManagement = () => {
   }, []);
 
   const loadParties = async () => {
-    const { data } = await supabase.from('parties').select('*').order('name');
+    const { data } = await supabase.from("parties").select("*").order("name");
     if (data) setParties(data);
   };
 
-  const handleAdd = async () => {
+  const handleAddParty = async () => {
     if (!newPartyName.trim()) {
       toast({
         title: "Error",
@@ -34,12 +36,12 @@ export const PartiesManagement = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('parties').insert({ name: newPartyName.trim() });
+      const { error } = await supabase.from("parties").insert({ name: newPartyName.trim() });
       if (error) throw error;
 
       toast({
         title: "Partido añadido",
-        description: `${newPartyName} ha sido añadido correctamente`,
+        description: "El partido ha sido añadido correctamente",
       });
       setNewPartyName("");
       loadParties();
@@ -54,17 +56,17 @@ export const PartiesManagement = () => {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`¿Eliminar el partido "${name}"?`)) return;
+  const handleDeleteParty = async (id: string) => {
+    if (!confirm("¿Estás seguro de eliminar este partido?")) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('parties').delete().eq('id', id);
+      const { error } = await supabase.from("parties").delete().eq("id", id);
       if (error) throw error;
 
       toast({
         title: "Partido eliminado",
-        description: `${name} ha sido eliminado`,
+        description: "El partido ha sido eliminado correctamente",
       });
       loadParties();
     } catch (error: any) {
@@ -81,23 +83,19 @@ export const PartiesManagement = () => {
   return (
     <div className="space-y-6">
       <Card className="p-4 bg-card">
-        <h3 className="font-display font-semibold text-lg mb-4">Añadir Partido</h3>
+        <h3 className="font-display font-semibold text-lg mb-4">Añadir Nuevo Partido</h3>
         <div className="flex gap-2">
           <div className="flex-1">
-            <Label htmlFor="party-name">Nombre del partido</Label>
+            <Label htmlFor="party-name">Nombre del Partido</Label>
             <Input
               id="party-name"
-              placeholder="Ej: Nuevo Partido"
+              placeholder="Ej: Partido Nuevo"
               value={newPartyName}
               onChange={(e) => setNewPartyName(e.target.value)}
               disabled={loading}
             />
           </div>
-          <Button 
-            onClick={handleAdd} 
-            disabled={loading}
-            className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
+          <Button onClick={handleAddParty} disabled={loading} className="mt-6">
             <Plus className="w-4 h-4 mr-2" />
             Añadir
           </Button>
@@ -105,15 +103,27 @@ export const PartiesManagement = () => {
       </Card>
 
       <div className="space-y-2">
-        <h3 className="font-display font-semibold text-lg">Partidos Políticos ({parties.length})</h3>
-        <div className="grid gap-2">
+        <h3 className="font-display font-semibold text-lg">Partidos Existentes ({parties.length})</h3>
+        <div className="grid gap-2 md:grid-cols-2">
           {parties.map((party) => (
-            <Card key={party.id} className="p-3 flex items-center justify-between bg-card hover:shadow-card transition-smooth">
-              <span className="text-foreground">{party.name}</span>
+            <Card
+              key={party.id}
+              className="p-3 flex items-center justify-between bg-card hover:shadow-card transition-smooth"
+            >
+              <div className="flex items-center gap-3">
+                {/* LOGO AÑADIDO */}
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={PARTY_LOGOS[party.name]} />
+                  <AvatarFallback>
+                    <Flag className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-foreground">{party.name}</span>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleDelete(party.id, party.name)}
+                onClick={() => handleDeleteParty(party.id)}
                 disabled={loading}
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
               >

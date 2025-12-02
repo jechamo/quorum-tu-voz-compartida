@@ -12,7 +12,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInitializeAdmin } from "@/hooks/useInitializeAdmin";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react"; // Importar iconos
+import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // <--- Importar Avatar
+import { PARTY_LOGOS, TEAM_LOGOS } from "@/lib/logos"; // <--- Importar Logos
 
 export default function AuthModule() {
   const { module } = useParams<{ module?: "politica" | "futbol" }>();
@@ -31,15 +33,13 @@ export default function AuthModule() {
   // Signup form
   const [signupPhone, setSignupPhone] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState(""); // Nuevo estado
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
   const [gender, setGender] = useState<"masculino" | "femenino" | "otro">("masculino");
   const [age, setAge] = useState("");
   const [selectedParty, setSelectedParty] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-
-  // Estado para visibilidad de contraseña
   const [showPassword, setShowPassword] = useState(false);
 
   const isPolitica = module === "politica";
@@ -100,7 +100,6 @@ export default function AuthModule() {
     setLoading(true);
     try {
       const { user } = await signIn(loginPhone, loginPassword);
-
       const { data: adminRole } = await supabase
         .from("user_roles")
         .select("role")
@@ -108,16 +107,10 @@ export default function AuthModule() {
         .eq("role", "admin")
         .maybeSingle();
 
-      toast({
-        title: "¡Bienvenido!",
-        description: "Has iniciado sesión correctamente",
-      });
+      toast({ title: "¡Bienvenido!", description: "Has iniciado sesión correctamente" });
 
-      if (adminRole) {
-        navigate("/admin");
-      } else {
-        navigate("/home");
-      }
+      if (adminRole) navigate("/admin");
+      else navigate("/home");
     } catch (error: any) {
       toast({
         title: "Error al iniciar sesión",
@@ -141,13 +134,8 @@ export default function AuthModule() {
       return;
     }
 
-    // Validación de contraseñas iguales
     if (signupPassword !== signupConfirmPassword) {
-      toast({
-        title: "Error",
-        description: "Las contraseñas no coinciden",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Las contraseñas no coinciden", variant: "destructive" });
       return;
     }
 
@@ -162,11 +150,7 @@ export default function AuthModule() {
 
     const ageNum = parseInt(age);
     if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) {
-      toast({
-        title: "Error",
-        description: "La edad debe estar entre 13 y 120 años",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "La edad debe estar entre 13 y 120 años", variant: "destructive" });
       return;
     }
 
@@ -181,19 +165,12 @@ export default function AuthModule() {
         acceptedTerms,
       };
 
-      if (selectedParty) {
-        signupData.partyId = selectedParty;
-      }
-      if (selectedTeam) {
-        signupData.teamId = selectedTeam;
-      }
+      if (selectedParty) signupData.partyId = selectedParty;
+      if (selectedTeam) signupData.teamId = selectedTeam;
 
       await signUp(signupData);
 
-      toast({
-        title: "¡Cuenta creada!",
-        description: "Tu cuenta ha sido creada correctamente",
-      });
+      toast({ title: "¡Cuenta creada!", description: "Tu cuenta ha sido creada correctamente" });
       navigate("/home");
     } catch (error: any) {
       toast({
@@ -210,8 +187,7 @@ export default function AuthModule() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-elevated bg-card">
         <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="mb-4 -ml-2">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Volver
+          <ArrowLeft className="w-4 h-4 mr-2" /> Volver
         </Button>
 
         <div className="flex flex-col items-center mb-6 space-y-4">
@@ -312,8 +288,6 @@ export default function AuthModule() {
                   disabled={loading}
                 />
               </div>
-
-              {/* Contraseña Original */}
               <div className="space-y-2">
                 <Label htmlFor="signup-password">Contraseña *</Label>
                 <div className="relative">
@@ -339,27 +313,22 @@ export default function AuthModule() {
                   </Button>
                 </div>
               </div>
-
-              {/* Confirmar Contraseña */}
               <div className="space-y-2">
                 <Label htmlFor="signup-confirm-password">Confirmar Contraseña *</Label>
-                <div className="relative">
-                  <Input
-                    id="signup-confirm-password"
-                    type={showPassword ? "text" : "password"}
-                    value={signupConfirmPassword}
-                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                    disabled={loading}
-                    className={
-                      signupConfirmPassword && signupPassword !== signupConfirmPassword ? "border-destructive" : ""
-                    }
-                  />
-                </div>
+                <Input
+                  id="signup-confirm-password"
+                  type={showPassword ? "text" : "password"}
+                  value={signupConfirmPassword}
+                  onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                  disabled={loading}
+                  className={
+                    signupConfirmPassword && signupPassword !== signupConfirmPassword ? "border-destructive" : ""
+                  }
+                />
                 {signupConfirmPassword && signupPassword !== signupConfirmPassword && (
                   <p className="text-xs text-destructive mt-1">Las contraseñas no coinciden</p>
                 )}
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="gender">Sexo *</Label>
@@ -399,7 +368,13 @@ export default function AuthModule() {
                     <SelectContent>
                       {parties.map((party) => (
                         <SelectItem key={party.id} value={party.id}>
-                          {party.name}
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={PARTY_LOGOS[party.name]} />
+                              <AvatarFallback>{party.name[0]}</AvatarFallback>
+                            </Avatar>
+                            {party.name}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -417,7 +392,13 @@ export default function AuthModule() {
                     <SelectContent>
                       {teams.map((team) => (
                         <SelectItem key={team.id} value={team.id}>
-                          {team.name}
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={TEAM_LOGOS[team.name]} />
+                              <AvatarFallback>{team.name[0]}</AvatarFallback>
+                            </Avatar>
+                            {team.name}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>

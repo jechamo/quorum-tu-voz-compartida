@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Plus } from "lucide-react";
+import { Plus, Trash2, Shirt } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // <--- Avatar
+import { TEAM_LOGOS } from "@/lib/logos"; // <--- Logos
 
 export const TeamsManagement = () => {
   const [teams, setTeams] = useState<any[]>([]);
@@ -18,11 +20,11 @@ export const TeamsManagement = () => {
   }, []);
 
   const loadTeams = async () => {
-    const { data } = await supabase.from('teams').select('*').order('name');
+    const { data } = await supabase.from("teams").select("*").order("name");
     if (data) setTeams(data);
   };
 
-  const handleAdd = async () => {
+  const handleAddTeam = async () => {
     if (!newTeamName.trim()) {
       toast({
         title: "Error",
@@ -34,12 +36,12 @@ export const TeamsManagement = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('teams').insert({ name: newTeamName.trim() });
+      const { error } = await supabase.from("teams").insert({ name: newTeamName.trim() });
       if (error) throw error;
 
       toast({
         title: "Equipo añadido",
-        description: `${newTeamName} ha sido añadido correctamente`,
+        description: "El equipo ha sido añadido correctamente",
       });
       setNewTeamName("");
       loadTeams();
@@ -54,17 +56,17 @@ export const TeamsManagement = () => {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`¿Eliminar el equipo "${name}"?`)) return;
+  const handleDeleteTeam = async (id: string) => {
+    if (!confirm("¿Estás seguro de eliminar este equipo?")) return;
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('teams').delete().eq('id', id);
+      const { error } = await supabase.from("teams").delete().eq("id", id);
       if (error) throw error;
 
       toast({
         title: "Equipo eliminado",
-        description: `${name} ha sido eliminado`,
+        description: "El equipo ha sido eliminado correctamente",
       });
       loadTeams();
     } catch (error: any) {
@@ -81,23 +83,19 @@ export const TeamsManagement = () => {
   return (
     <div className="space-y-6">
       <Card className="p-4 bg-card">
-        <h3 className="font-display font-semibold text-lg mb-4">Añadir Equipo</h3>
+        <h3 className="font-display font-semibold text-lg mb-4">Añadir Nuevo Equipo</h3>
         <div className="flex gap-2">
           <div className="flex-1">
-            <Label htmlFor="team-name">Nombre del equipo</Label>
+            <Label htmlFor="team-name">Nombre del Equipo</Label>
             <Input
               id="team-name"
-              placeholder="Ej: Nuevo CF"
+              placeholder="Ej: Nuevo Club de Fútbol"
               value={newTeamName}
               onChange={(e) => setNewTeamName(e.target.value)}
               disabled={loading}
             />
           </div>
-          <Button 
-            onClick={handleAdd} 
-            disabled={loading}
-            className="mt-6 bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-          >
+          <Button onClick={handleAddTeam} disabled={loading} className="mt-6">
             <Plus className="w-4 h-4 mr-2" />
             Añadir
           </Button>
@@ -105,15 +103,27 @@ export const TeamsManagement = () => {
       </Card>
 
       <div className="space-y-2">
-        <h3 className="font-display font-semibold text-lg">Equipos de Fútbol ({teams.length})</h3>
-        <div className="grid gap-2">
+        <h3 className="font-display font-semibold text-lg">Equipos Existentes ({teams.length})</h3>
+        <div className="grid gap-2 md:grid-cols-2">
           {teams.map((team) => (
-            <Card key={team.id} className="p-3 flex items-center justify-between bg-card hover:shadow-card transition-smooth">
-              <span className="text-foreground">{team.name}</span>
+            <Card
+              key={team.id}
+              className="p-3 flex items-center justify-between bg-card hover:shadow-card transition-smooth"
+            >
+              <div className="flex items-center gap-3">
+                {/* LOGO AÑADIDO */}
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={TEAM_LOGOS[team.name]} />
+                  <AvatarFallback>
+                    <Shirt className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+                <span className="font-medium text-foreground">{team.name}</span>
+              </div>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleDelete(team.id, team.name)}
+                onClick={() => handleDeleteTeam(team.id)}
                 disabled={loading}
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
               >
