@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">quorum</string>
+    <string name="title_activity_main">quorum</string>
+    <string name="package_name">com.tuvozcompartida.quorum</string>
+    <string name="custom_url_scheme">com.tuvozcompartida.quorum</string>
+</resources>
