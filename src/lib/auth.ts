@@ -3,7 +3,8 @@ import { z } from "zod";
 
 // Esquema de validación de seguridad
 const signUpSchema = z.object({
-  phone: z.string().regex(/^[0-9]{9}$/, "El teléfono debe tener 9 dígitos numéricos"),
+  email: z.string().email("Email inválido").optional().or(z.literal("")),
+  phone: z.string().regex(/^[0-9]{9}$/, "El teléfono debe tener 9 dígitos numéricos").optional().or(z.literal("")),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   username: z
     .string()
@@ -15,10 +16,13 @@ const signUpSchema = z.object({
   acceptedTerms: z.literal(true, {
     errorMap: () => ({ message: "Debes aceptar los términos y condiciones" }),
   }),
+}).refine((data) => data.email || data.phone, {
+  message: "Debes proporcionar un email o un teléfono",
 });
 
 export interface SignUpData {
-  phone: string;
+  email?: string;
+  phone?: string;
   password: string;
   username: string;
   gender: "masculino" | "femenino" | "otro";
@@ -35,25 +39,33 @@ export const signUp = async (data: SignUpData) => {
     throw new Error(validation.error.errors[0].message);
   }
 
-  // 2. Crear usuario Auth
-  const email = `${data.phone}@quorum.app`;
+  // 2. Determinar el email para Supabase Auth
+  // Si el usuario proporciona email real, usarlo; si no, generar uno ficticio desde el teléfono
+  const isRealEmail = !!data.email;
+  const authEmail = data.email || `${data.phone}@quorum.app`;
+
+  // 3. Crear usuario Auth
   const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
+    email: authEmail,
     password: data.password,
     options: {
       data: {
-        phone: data.phone,
+        phone: data.phone || null,
+        email: data.email || null,
         username: data.username,
       },
-      emailRedirectTo: `http://localhost`,
+      emailRedirectTo: window.location.origin,
     },
   });
 
   if (authError) throw authError;
   if (!authData.user) throw new Error("No se pudo crear el usuario");
 
+  // Si es email real y requiere confirmación, informar al usuario
+  const needsEmailConfirmation = isRealEmail && !authData.session;
+
   // ---------------------------------------------------------
-  // 3. ASIGNACIÓN AUTOMÁTICA DE 'SIN EQUIPO' / 'APOLÍTICO'
+  // 4. ASIGNACIÓN AUTOMÁTICA DE 'SIN EQUIPO' / 'APOLÍTICO'
   // ---------------------------------------------------------
   let finalPartyId = data.partyId;
   let finalTeamId = data.teamId;
@@ -75,10 +87,11 @@ export const signUp = async (data: SignUpData) => {
   }
   // ---------------------------------------------------------
 
-  // 4. Crear perfil con los IDs corregidos (nunca NULL)
+  // 5. Crear perfil con los IDs corregidos
   const { error: profileError } = await supabase.from("profiles").insert({
     id: authData.user.id,
-    phone: data.phone,
+    phone: data.phone || null,
+    email: data.email || null,
     username: data.username,
     gender: data.gender,
     age: data.age,
@@ -94,7 +107,7 @@ export const signUp = async (data: SignUpData) => {
     throw profileError;
   }
 
-  // 5. Asignar rol de usuario
+  // 6. Asignar rol de usuario
   const { error: roleError } = await supabase.from("user_roles").insert({
     user_id: authData.user.id,
     role: "user",
@@ -102,11 +115,17 @@ export const signUp = async (data: SignUpData) => {
 
   if (roleError) throw roleError;
 
-  return authData;
+  return { ...authData, needsEmailConfirmation };
 };
 
-export const signIn = async (phone: string, password: string) => {
-  const email = `${phone}@quorum.app`;
+// Helper para detectar si es email o teléfono
+const isEmail = (value: string): boolean => {
+  return value.includes("@");
+};
+
+export const signIn = async (identifier: string, password: string) => {
+  // Si es un email real, usarlo directamente; si es teléfono, generar email ficticio
+  const email = isEmail(identifier) ? identifier : `${identifier}@quorum.app`;
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;

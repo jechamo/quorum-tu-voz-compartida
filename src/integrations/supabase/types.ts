@@ -62,10 +62,11 @@ export type Database = {
         Row: {
           age: number;
           created_at: string | null;
+          email: string | null;
           gender: Database["public"]["Enums"]["user_gender"];
           id: string;
           party_id: string | null;
-          phone: string;
+          phone: string | null;
           team_id: string | null;
           username: string;
           accepted_terms: boolean | null;
@@ -74,10 +75,11 @@ export type Database = {
         Insert: {
           age: number;
           created_at?: string | null;
+          email?: string | null;
           gender: Database["public"]["Enums"]["user_gender"];
           id: string;
           party_id?: string | null;
-          phone: string;
+          phone?: string | null;
           team_id?: string | null;
           username: string;
           accepted_terms?: boolean | null;
@@ -86,10 +88,11 @@ export type Database = {
         Update: {
           age?: number;
           created_at?: string | null;
+          email?: string | null;
           gender?: Database["public"]["Enums"]["user_gender"];
           id?: string;
           party_id?: string | null;
-          phone?: string;
+          phone?: string | null;
           team_id?: string | null;
           username?: string;
           accepted_terms?: boolean | null;

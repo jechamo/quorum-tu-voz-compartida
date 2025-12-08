@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInitializeAdmin } from "@/hooks/useInitializeAdmin";
-import { ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Mail, Phone } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // <--- Importar Avatar
 import { PARTY_LOGOS, TEAM_LOGOS } from "@/lib/logos"; // <--- Importar Logos
 
@@ -27,10 +27,13 @@ export default function AuthModule() {
   const [teams, setTeams] = useState<any[]>([]);
 
   // Login form
-  const [loginPhone, setLoginPhone] = useState("");
+  const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
+  const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
   // Signup form
+  const [signupMethod, setSignupMethod] = useState<"email" | "phone">("email");
+  const [signupEmail, setSignupEmail] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
@@ -41,6 +44,7 @@ export default function AuthModule() {
   const [selectedTeam, setSelectedTeam] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   const isPolitica = module === "politica";
   const isGeneral = !module;
@@ -88,7 +92,7 @@ export default function AuthModule() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginPhone || !loginPassword) {
+    if (!loginIdentifier || !loginPassword) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos",
@@ -99,7 +103,7 @@ export default function AuthModule() {
 
     setLoading(true);
     try {
-      const { user } = await signIn(loginPhone, loginPassword);
+      const { user } = await signIn(loginIdentifier, loginPassword);
       const { data: adminRole } = await supabase
         .from("user_roles")
         .select("role")
@@ -125,7 +129,8 @@ export default function AuthModule() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!signupPhone || !signupPassword || !signupConfirmPassword || !username || !age) {
+    const hasContactMethod = signupMethod === "email" ? signupEmail : signupPhone;
+    if (!hasContactMethod || !signupPassword || !signupConfirmPassword || !username || !age) {
       toast({
         title: "Error",
         description: "Por favor completa todos los campos obligatorios",
@@ -157,7 +162,6 @@ export default function AuthModule() {
     setLoading(true);
     try {
       const signupData: SignUpData = {
-        phone: signupPhone,
         password: signupPassword,
         username,
         gender,
@@ -165,13 +169,28 @@ export default function AuthModule() {
         acceptedTerms,
       };
 
+      // Añadir email o teléfono según el método seleccionado
+      if (signupMethod === "email") {
+        signupData.email = signupEmail;
+      } else {
+        signupData.phone = signupPhone;
+      }
+
       if (selectedParty) signupData.partyId = selectedParty;
       if (selectedTeam) signupData.teamId = selectedTeam;
 
-      await signUp(signupData);
+      const result = await signUp(signupData);
 
-      toast({ title: "¡Cuenta creada!", description: "Tu cuenta ha sido creada correctamente" });
-      navigate("/home");
+      if (result.needsEmailConfirmation) {
+        setEmailSent(true);
+        toast({ 
+          title: "¡Revisa tu correo!", 
+          description: "Te hemos enviado un enlace de verificación a tu email" 
+        });
+      } else {
+        toast({ title: "¡Cuenta creada!", description: "Tu cuenta ha sido creada correctamente" });
+        navigate("/home");
+      }
     } catch (error: any) {
       toast({
         title: "Error al registrarse",
@@ -218,14 +237,44 @@ export default function AuthModule() {
 
           <TabsContent value="login">
             <form onSubmit={handleLogin} className="space-y-4">
+              {/* Selector de método de login */}
+              <div className="flex gap-2 p-1 bg-muted rounded-lg">
+                <Button
+                  type="button"
+                  variant={loginMethod === "email" ? "default" : "ghost"}
+                  size="sm"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    setLoginMethod("email");
+                    setLoginIdentifier("");
+                  }}
+                >
+                  <Mail className="h-4 w-4" /> Email
+                </Button>
+                <Button
+                  type="button"
+                  variant={loginMethod === "phone" ? "default" : "ghost"}
+                  size="sm"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    setLoginMethod("phone");
+                    setLoginIdentifier("");
+                  }}
+                >
+                  <Phone className="h-4 w-4" /> Teléfono
+                </Button>
+              </div>
+
               <div className="space-y-2">
-                <Label htmlFor="login-phone">Teléfono</Label>
+                <Label htmlFor="login-identifier">
+                  {loginMethod === "email" ? "Email" : "Teléfono"}
+                </Label>
                 <Input
-                  id="login-phone"
-                  type="tel"
-                  placeholder="Ej: 678555555"
-                  value={loginPhone}
-                  onChange={(e) => setLoginPhone(e.target.value)}
+                  id="login-identifier"
+                  type={loginMethod === "email" ? "email" : "tel"}
+                  placeholder={loginMethod === "email" ? "tu@email.com" : "678555555"}
+                  value={loginIdentifier}
+                  onChange={(e) => setLoginIdentifier(e.target.value)}
                   disabled={loading}
                 />
               </div>
@@ -265,18 +314,84 @@ export default function AuthModule() {
           </TabsContent>
 
           <TabsContent value="signup">
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-phone">Teléfono *</Label>
-                <Input
-                  id="signup-phone"
-                  type="tel"
-                  placeholder="Ej: 679656914"
-                  value={signupPhone}
-                  onChange={(e) => setSignupPhone(e.target.value)}
-                  disabled={loading}
-                />
+            {emailSent ? (
+              <div className="text-center py-8 space-y-4">
+                <div className="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                  <Mail className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-lg font-semibold">¡Revisa tu correo!</h3>
+                <p className="text-sm text-muted-foreground">
+                  Te hemos enviado un enlace de verificación a <strong>{signupEmail}</strong>.
+                  <br />
+                  Haz clic en el enlace para activar tu cuenta.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEmailSent(false);
+                    setSignupEmail("");
+                    setSignupPassword("");
+                    setSignupConfirmPassword("");
+                  }}
+                >
+                  Volver al registro
+                </Button>
               </div>
+            ) : (
+            <form onSubmit={handleSignup} className="space-y-4">
+              {/* Selector de método de registro */}
+              <div className="flex gap-2 p-1 bg-muted rounded-lg">
+                <Button
+                  type="button"
+                  variant={signupMethod === "email" ? "default" : "ghost"}
+                  size="sm"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    setSignupMethod("email");
+                    setSignupPhone("");
+                  }}
+                >
+                  <Mail className="h-4 w-4" /> Email
+                </Button>
+                <Button
+                  type="button"
+                  variant={signupMethod === "phone" ? "default" : "ghost"}
+                  size="sm"
+                  className="flex-1 gap-2"
+                  onClick={() => {
+                    setSignupMethod("phone");
+                    setSignupEmail("");
+                  }}
+                >
+                  <Phone className="h-4 w-4" /> Teléfono
+                </Button>
+              </div>
+
+              {signupMethod === "email" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-email">Email *</Label>
+                  <Input
+                    id="signup-email"
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="signup-phone">Teléfono *</Label>
+                  <Input
+                    id="signup-phone"
+                    type="tel"
+                    placeholder="Ej: 679656914"
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="username">Nombre de usuario *</Label>
                 <Input
@@ -431,6 +546,7 @@ export default function AuthModule() {
                 {loading ? "Creando cuenta..." : "Crear Cuenta"}
               </Button>
             </form>
+            )}
           </TabsContent>
         </Tabs>
       </Card>
