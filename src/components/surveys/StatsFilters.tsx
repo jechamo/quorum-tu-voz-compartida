@@ -3,13 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Info, CalendarIcon } from "lucide-react";
 import { MultiSelect } from "@/components/ui/multi-select";
-import { PARTY_LOGOS, TEAM_LOGOS } from "@/lib/logos"; // <--- IMPORTAMOS LOS LOGOS CENTRALIZADOS
+import { PARTY_LOGOS, TEAM_LOGOS } from "@/lib/logos";
+import { format, subMonths } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface StatsFiltersProps {
   module: "politica" | "futbol";
   onFiltersChange: (filters: FilterState) => void;
+  showDateRange?: boolean;
+  showScopeFilter?: boolean;
 }
 
 export interface FilterState {
@@ -17,6 +25,9 @@ export interface FilterState {
   teamIds: string[];
   gender: string | null;
   ageRanges: string[];
+  dateFrom?: Date | null;
+  dateTo?: Date | null;
+  scope?: string | null;
 }
 
 export const AGE_RANGES = [
@@ -28,7 +39,7 @@ export const AGE_RANGES = [
   { id: "65+", label: "65+ años", min: 65, max: 120 },
 ];
 
-export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => {
+export const StatsFilters = ({ module, onFiltersChange, showDateRange = false, showScopeFilter = false }: StatsFiltersProps) => {
   const [parties, setParties] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
 
@@ -37,6 +48,9 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
     teamIds: [],
     gender: null,
     ageRanges: [],
+    dateFrom: showDateRange ? subMonths(new Date(), 1) : null,
+    dateTo: showDateRange ? new Date() : null,
+    scope: null,
   });
   const isFirstRender = useRef(true);
 
@@ -67,15 +81,88 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
     <Card className="p-4 bg-muted/20 space-y-4">
       <div className="flex items-center gap-2 text-muted-foreground border-b pb-2">
         <Info className="w-4 h-4" />
-        <span className="text-sm font-medium">Filtros para visualizar Resultados (No afectan a tu voto)</span>
+        <span className="text-sm font-medium">Filtros para visualizar Resultados</span>
       </div>
+
+      {showDateRange && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pb-4 border-b">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Fecha Desde</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !filters.dateFrom && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.dateFrom ? format(filters.dateFrom, "PPP", { locale: es }) : "Seleccionar"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={filters.dateFrom || undefined}
+                  onSelect={(date) => setFilters((prev) => ({ ...prev, dateFrom: date || null }))}
+                  initialFocus
+                  locale={es}
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Fecha Hasta</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !filters.dateTo && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.dateTo ? format(filters.dateTo, "PPP", { locale: es }) : "Seleccionar"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={filters.dateTo || undefined}
+                  onSelect={(date) => setFilters((prev) => ({ ...prev, dateTo: date || null }))}
+                  initialFocus
+                  locale={es}
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {showScopeFilter && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Tipo de Pregunta</Label>
+              <Select
+                value={filters.scope || "all"}
+                onValueChange={(value) => setFilters((prev) => ({ ...prev, scope: value === "all" ? null : value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="general">Generales</SelectItem>
+                  <SelectItem value="specific">Específicas</SelectItem>
+                  <SelectItem value="timeless">Atemporales</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {module === "politica" && (
           <div className="space-y-2">
             <Label className="text-sm font-medium">Partidos Políticos</Label>
             <MultiSelect
-              // Usamos la constante importada PARTY_LOGOS
               options={parties.map((p) => ({
                 label: p.name,
                 value: p.id,
@@ -92,7 +179,6 @@ export const StatsFilters = ({ module, onFiltersChange }: StatsFiltersProps) => 
           <div className="space-y-2">
             <Label className="text-sm font-medium">Equipos de Fútbol</Label>
             <MultiSelect
-              // Usamos la constante importada TEAM_LOGOS
               options={teams.map((t) => ({
                 label: t.name,
                 value: t.id,
