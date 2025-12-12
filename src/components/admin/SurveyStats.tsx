@@ -310,7 +310,7 @@ export const SurveyStats = () => {
         answer_option_id,
         answered_at,
         answer_options!inner(text, question_id),
-        profiles(username, age, gender, party_id, team_id)
+        profiles(age, gender, party_id, team_id)
       `)
       .in("question_id", questionIds);
 
@@ -365,7 +365,6 @@ export const SurveyStats = () => {
         { wch: 12 }, // Tipo
         { wch: 12 }, // Fecha Pregunta
         { wch: 30 }, // Respuesta
-        { wch: 15 }, // Usuario
         { wch: 8 },  // Edad
         { wch: 12 }, // Sexo
         { wch: 20 }, // Partido
@@ -401,7 +400,6 @@ export const SurveyStats = () => {
         { wch: 12 },
         { wch: 12 },
         { wch: 30 },
-        { wch: 15 },
         { wch: 8 },
         { wch: 12 },
         { wch: 20 },
