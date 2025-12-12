@@ -225,6 +225,7 @@ export const QuestionsManagement = () => {
                 <SelectContent>
                   <SelectItem value="general">General</SelectItem>
                   <SelectItem value="specific">Específica (partido/equipo)</SelectItem>
+                  <SelectItem value="timeless">Atemporal (debate clásico)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -333,6 +334,11 @@ export const QuestionsManagement = () => {
                   >
                     {q.module === "politica" ? "Política" : "La Liga"}
                   </span>
+                  {q.scope === "timeless" && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600">
+                      Atemporal
+                    </span>
+                  )}
                   {q.is_mandatory && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground">
                       Obligatoria

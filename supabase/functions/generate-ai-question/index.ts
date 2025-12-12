@@ -13,43 +13,23 @@ const normalize = (s: string): string =>
 
 /**
  * Evita falsos positivos tipo "athletic performance" para "Athletic Club".
- * - Comprueba coincidencia directa del nombre normalizado.
- * - Comprueba tokens "fuertes" del nombre (más de 3 letras, no genéricos).
  */
 function isResultRelevantToEntity(result: any, entity: string, module: string): boolean {
   const text = normalize(`${result.title} ${result.content || ""}`);
   const ent = normalize(entity);
 
-  if (!ent) return true; // si no hay entity, dejamos pasar
+  if (!ent) return true;
 
-  // 1) Coincidencia directa del nombre completo
   if (text.includes(ent)) return true;
 
-  // 2) Coincidencia con palabras clave significativas
   const blacklist = new Set([
-    "athletic",
-    "club",
-    "real",
-    "city",
-    "united",
-    "cf",
-    "fc",
-    "cd",
-    "sc",
-    "deportivo",
-    "sporting",
-    "partido",
-    "popular",
-    "socialista",
-    "españa",
+    "athletic", "club", "real", "city", "united", "cf", "fc", "cd", "sc",
+    "deportivo", "sporting", "partido", "popular", "socialista", "españa",
   ]);
 
   let tokens = ent.split(/\s+/).filter((t) => t.length > 3);
-
-  // filtramos tokens genéricos
   tokens = tokens.filter((t) => !blacklist.has(t));
 
-  // si nos hemos quedado sin tokens "fuertes", usamos el nombre entero
   if (tokens.length === 0) {
     return text.includes(ent);
   }
@@ -57,15 +37,11 @@ function isResultRelevantToEntity(result: any, entity: string, module: string): 
   return tokens.some((t) => text.includes(t));
 }
 
-/**
- * Construye la query de búsqueda para Tavily, ajustando según módulo.
- */
 function buildEntityQuery(entity: string, module: string, topic?: string): string {
   const normEntity = (entity || "").trim();
   const baseTopic = topic || "noticias última hora actualidad";
 
   if (module === "futbol") {
-    // reforzamos que es fútbol español / LaLiga
     return `"${normEntity}" fútbol España ${baseTopic} LaLiga "Liga EA Sports"`;
   }
 
@@ -73,13 +49,9 @@ function buildEntityQuery(entity: string, module: string, topic?: string): strin
     return `"${normEntity}" partido político España ${baseTopic} Congreso Gobierno`;
   }
 
-  // fallback genérico
   return `${normEntity} ${module} España ${baseTopic}`;
 }
 
-/**
- * Construye una query general por módulo para las preguntas "generales".
- */
 function buildGeneralQuery(module: string, topic?: string): string {
   const baseTopic = topic || "noticias última hora actualidad polémica";
 
@@ -94,15 +66,6 @@ function buildGeneralQuery(module: string, topic?: string): string {
   return `últimas noticias ${baseTopic} España ${module}`;
 }
 
-/**
- * Llamada a Tavily con:
- * - topic: "news"
- * - search_depth: "basic"
- * - time_range: "week" (últimos ~7 días)
- * Hace dos intentos:
- *  1. Con dominios filtrados (si useDomains = true)
- *  2. Sin dominios (búsqueda abierta) si no hay resultados.
- */
 async function tavilySearch(
   query: string,
   TAVILY_API_KEY: string,
@@ -112,14 +75,13 @@ async function tavilySearch(
 ): Promise<any[]> {
   console.log(`🔎 Tavily buscando: "${query}" (useDomains=${useDomains})`);
 
-  // INTENTO 1: Con dominios (si toca)
   let body: Record<string, unknown> = {
     api_key: TAVILY_API_KEY,
     query,
     topic: "general",
     search_depth: "basic",
     max_results: maxResults,
-    time_range: "week", // <--- Última semana
+    time_range: "week",
   };
 
   if (useDomains && domains.length > 0) {
@@ -140,7 +102,6 @@ async function tavilySearch(
   let data = resp.ok ? await resp.json() : { results: [] };
   let results: any[] = (data as any).results || [];
 
-  // INTENTO 2: sin dominios si no hay resultados
   if ((!results || results.length === 0) && useDomains) {
     console.log("⚠️ Sin resultados con dominios. Búsqueda abierta sin filtros...");
 
@@ -173,137 +134,206 @@ async function tavilySearch(
   return results;
 }
 
-/**
- * Formatea una lista de resultados de Tavily en texto para el contexto.
- */
 function formatResultsBlock(results: any[]): string {
   return results.map((r) => `TITULAR: ${r.title}\nFUENTE: ${r.url}\nRESUMEN: ${r.content}`).join("\n\n");
 }
 
+/**
+ * Genera el prompt para preguntas ATEMPORALES (sin noticias)
+ */
+function getTimelessSystemPrompt(module: string, topic?: string): string {
+  const moduleContext = module === "politica" 
+    ? "política española y debates sociales"
+    : "fútbol español, LaLiga y cultura futbolística";
+
+  const topicHint = topic 
+    ? `El usuario quiere enfocarse en: "${topic}". Incorpora este tema si es relevante.`
+    : "";
+
+  return `
+Eres un experto en crear debates y encuestas sobre ${moduleContext}.
+
+TU MISIÓN: Generar preguntas ATEMPORALES que siempre generan debate, sin depender de noticias actuales.
+
+CARACTERÍSTICAS DE LAS PREGUNTAS ATEMPORALES:
+- Son debates CLÁSICOS que SIEMPRE existen y generan opiniones divididas
+- NO dependen de eventos actuales ni de noticias recientes
+- Son cuestiones FILOSÓFICAS, ÉTICAS o de OPINIÓN sobre el tema
+- Pueden repetirse semana tras semana porque son eternas
+
+${topicHint}
+
+${module === "politica" ? `
+EJEMPLOS DE TEMAS ATEMPORALES EN POLÍTICA:
+- Cambio horario en España
+- Monarquía vs República
+- Edad de jubilación
+- Duración de los mandatos
+- Financiación autonómica
+- Modelo territorial
+- Pena de muerte
+- Eutanasia y aborto
+- Inmigración y fronteras
+- Impuestos y gasto público
+- Educación pública vs concertada
+- Sanidad pública vs privada
+- Servicio militar obligatorio
+- Voto obligatorio
+- Límite de mandatos
+- Aforamientos políticos
+` : `
+EJEMPLOS DE TEMAS ATEMPORALES EN FÚTBOL:
+- VAR: ¿mejora o arruina el fútbol?
+- Fichajes millonarios vs cantera
+- Superliga europea
+- Calendario sobrecargado
+- Selección vs club
+- Mejor jugador de la historia
+- Clásicos rivalidades eternas
+- Árbitros profesionales
+- Fútbol moderno vs tradicional
+- Precios de las entradas
+- Horarios de los partidos
+- Césped artificial vs natural
+- Fair play financiero
+- Nacionalización de jugadores
+- Mundiales cada 2 años
+`}
+
+GENERA 5 PREGUNTAS ATEMPORALES variadas.
+
+REGLAS:
+1. PREGUNTAS POLARIZANTES: Que dividan opiniones claramente
+2. SIN FECHAS NI EVENTOS: Nada que dependa de la actualidad
+3. OPCIONES NATURALES (¡PROHIBIDO CORCHETES!):
+   - MAL: "[A favor]", "[En contra]"
+   - BIEN: "Totalmente a favor", "Depende del caso", "Es un error absoluto"
+
+FORMATO JSON:
+{
+  "results": [
+    { "question": "¿Pregunta atemporal?", "options": ["Opción A", "Opción B", "Opción C", "Opción D"], "target_entity": "General" }
+  ]
+}
+`;
+}
+
 serve(async (req) => {
-  // Manejo CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { topic, entity, module, mode, entitiesList, model } = await req.json();
+    const { topic, entity, module, mode, entitiesList, model, isTimeless } = await req.json();
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const TAVILY_API_KEY = Deno.env.get("TAVILY_API_KEY");
 
-    if (!OPENAI_API_KEY || !TAVILY_API_KEY) {
-      throw new Error("Faltan API Keys (OpenAI o Tavily)");
+    if (!OPENAI_API_KEY) {
+      throw new Error("Falta API Key de OpenAI");
     }
 
     const effectiveModule = module || "politica";
     const effectiveMode = mode || "single";
 
-    // Dominios fiables
-    const domains =
-      effectiveModule === "futbol"
-        ? ["marca.com", "as.com", "mundodeportivo.com", "sport.es", "relevo.com", "elpais.com"]
-        : [
-            "elpais.com",
-            "elmundo.es",
-            "elconfidencial.com",
-            "okdiario.com",
-            "eldiario.es",
-            "abc.es",
-            "elespanol.com",
-            "lavanguardia.com",
-          ];
+    let systemPrompt: string;
 
     // ---------------------------------------------------------
-    // 1. BÚSQUEDA DE NOTICIAS (TAVILY)
+    // MODO ATEMPORAL: Sin búsqueda de noticias
     // ---------------------------------------------------------
-
-    let contextNews = "";
-
-    if (effectiveMode === "batch" && Array.isArray(entitiesList) && entitiesList.length > 0) {
-      // ---- MODO BATCH ----
-
-      // 1) Bloque GENERAL por módulo (para la pregunta general)
-      const generalQuery = buildGeneralQuery(effectiveModule, topic);
-      const generalResults = await tavilySearch(generalQuery, TAVILY_API_KEY, domains, true, 7);
-
-      console.log("ℹ️ [BATCH] Resultados GENERAL:", generalResults.length);
-
-      const generalBlock =
-        generalResults.length > 0
-          ? `GENERAL:\n${formatResultsBlock(generalResults)}`
-          : "GENERAL:\nSIN NOTICIAS RECIENTES (últimos 7 días).";
-
-      // 2) Búsqueda por cada ENTIDAD
-      const perEntityResults = await Promise.all(
-        entitiesList.map(async (ent: string) => {
-          const q = buildEntityQuery(ent, effectiveModule, topic);
-          const rawResults = await tavilySearch(q, TAVILY_API_KEY, domains, true, 5);
-
-          console.log(`ℹ️ [BATCH] Entity="${ent}" rawResults:`, rawResults.length);
-
-          let filtered = rawResults.filter((r) => isResultRelevantToEntity(r, ent, effectiveModule));
-
-          console.log(`ℹ️ [BATCH] Entity="${ent}" filtered:`, filtered.length);
-
-          // Fallback si el filtro se pasa de estricto
-          if (filtered.length === 0 && rawResults.length > 0) {
-            console.log(`⚠️ [BATCH] Filtro muy agresivo para "${ent}", usando rawResults.`);
-            filtered = rawResults;
-          }
-
-          return { entity: ent, results: filtered };
-        }),
-      );
-
-      const perEntityBlocks = perEntityResults
-        .map(({ entity: ent, results }) => {
-          if (!results || results.length === 0) {
-            return `ENTIDAD: ${ent}\nSIN NOTICIAS RECIENTES (últimos 7 días).`;
-          }
-
-          return `ENTIDAD: ${ent}\n${formatResultsBlock(results)}`;
-        })
-        .join("\n\n");
-
-      contextNews = `${generalBlock}\n\n${perEntityBlocks}`;
+    if (isTimeless) {
+      console.log("🕐 Modo ATEMPORAL activado - sin búsqueda de noticias");
+      systemPrompt = getTimelessSystemPrompt(effectiveModule, topic);
     } else {
-      // ---- MODO SINGLE (por defecto) ----
-      const ent = entity || "";
-      const q = buildEntityQuery(ent, effectiveModule, topic);
-
-      const rawResults = await tavilySearch(q, TAVILY_API_KEY, domains, true, 5);
-
-      console.log("ℹ️ [SINGLE] Query:", q);
-      console.log("ℹ️ [SINGLE] rawResults:", rawResults.length);
-      rawResults.slice(0, 3).forEach((r: any, i: number) => {
-        console.log(`   [${i}]`, r.title, "->", r.url);
-      });
-
-      let filtered = ent ? rawResults.filter((r) => isResultRelevantToEntity(r, ent, effectiveModule)) : rawResults;
-
-      console.log("ℹ️ [SINGLE] Resultados después del filtro:", filtered.length, "(raw:", rawResults.length, ")");
-
-      // ⚠️ Si Tavily ha devuelto cosas pero el filtro se ha pasado de estricto,
-      // usamos los resultados sin filtrar como fallback.
-      if (filtered.length === 0 && rawResults.length > 0) {
-        console.log("⚠️ [SINGLE] Filtro demasiado agresivo, usando resultados sin filtrar para la entidad:", ent);
-        filtered = rawResults;
+      // ---------------------------------------------------------
+      // MODO NORMAL: Con búsqueda de noticias (Tavily)
+      // ---------------------------------------------------------
+      if (!TAVILY_API_KEY) {
+        throw new Error("Falta API Key de Tavily para búsqueda de noticias");
       }
 
-      if (filtered.length > 0) {
-        contextNews = formatResultsBlock(filtered);
+      const domains =
+        effectiveModule === "futbol"
+          ? ["marca.com", "as.com", "mundodeportivo.com", "sport.es", "relevo.com", "elpais.com"]
+          : [
+              "elpais.com", "elmundo.es", "elconfidencial.com", "okdiario.com",
+              "eldiario.es", "abc.es", "elespanol.com", "lavanguardia.com",
+            ];
+
+      let contextNews = "";
+
+      if (effectiveMode === "batch" && Array.isArray(entitiesList) && entitiesList.length > 0) {
+        const generalQuery = buildGeneralQuery(effectiveModule, topic);
+        const generalResults = await tavilySearch(generalQuery, TAVILY_API_KEY, domains, true, 7);
+
+        console.log("ℹ️ [BATCH] Resultados GENERAL:", generalResults.length);
+
+        const generalBlock =
+          generalResults.length > 0
+            ? `GENERAL:\n${formatResultsBlock(generalResults)}`
+            : "GENERAL:\nSIN NOTICIAS RECIENTES (últimos 7 días).";
+
+        const perEntityResults = await Promise.all(
+          entitiesList.map(async (ent: string) => {
+            const q = buildEntityQuery(ent, effectiveModule, topic);
+            const rawResults = await tavilySearch(q, TAVILY_API_KEY, domains, true, 5);
+
+            console.log(`ℹ️ [BATCH] Entity="${ent}" rawResults:`, rawResults.length);
+
+            let filtered = rawResults.filter((r) => isResultRelevantToEntity(r, ent, effectiveModule));
+
+            console.log(`ℹ️ [BATCH] Entity="${ent}" filtered:`, filtered.length);
+
+            if (filtered.length === 0 && rawResults.length > 0) {
+              console.log(`⚠️ [BATCH] Filtro muy agresivo para "${ent}", usando rawResults.`);
+              filtered = rawResults;
+            }
+
+            return { entity: ent, results: filtered };
+          }),
+        );
+
+        const perEntityBlocks = perEntityResults
+          .map(({ entity: ent, results }) => {
+            if (!results || results.length === 0) {
+              return `ENTIDAD: ${ent}\nSIN NOTICIAS RECIENTES (últimos 7 días).`;
+            }
+
+            return `ENTIDAD: ${ent}\n${formatResultsBlock(results)}`;
+          })
+          .join("\n\n");
+
+        contextNews = `${generalBlock}\n\n${perEntityBlocks}`;
       } else {
-        console.log("❌ [SINGLE] Sin noticias relevantes en la última semana para la entidad (Tavily devolvió 0).");
-        contextNews =
-          "NO HAY NOTICIAS RECIENTES (últimos 7 días) para esta entidad. IMPORTANTE: No inventes noticias falsas. Genera una pregunta sobre un tema 'evergreen' (histórico/recurrente) de esta entidad.";
+        const ent = entity || "";
+        const q = buildEntityQuery(ent, effectiveModule, topic);
+
+        const rawResults = await tavilySearch(q, TAVILY_API_KEY, domains, true, 5);
+
+        console.log("ℹ️ [SINGLE] Query:", q);
+        console.log("ℹ️ [SINGLE] rawResults:", rawResults.length);
+        rawResults.slice(0, 3).forEach((r: any, i: number) => {
+          console.log(`   [${i}]`, r.title, "->", r.url);
+        });
+
+        let filtered = ent ? rawResults.filter((r) => isResultRelevantToEntity(r, ent, effectiveModule)) : rawResults;
+
+        console.log("ℹ️ [SINGLE] Resultados después del filtro:", filtered.length, "(raw:", rawResults.length, ")");
+
+        if (filtered.length === 0 && rawResults.length > 0) {
+          console.log("⚠️ [SINGLE] Filtro demasiado agresivo, usando resultados sin filtrar para la entidad:", ent);
+          filtered = rawResults;
+        }
+
+        if (filtered.length > 0) {
+          contextNews = formatResultsBlock(filtered);
+        } else {
+          console.log("❌ [SINGLE] Sin noticias relevantes en la última semana para la entidad (Tavily devolvió 0).");
+          contextNews =
+            "NO HAY NOTICIAS RECIENTES (últimos 7 días) para esta entidad. IMPORTANTE: No inventes noticias falsas. Genera una pregunta sobre un tema 'evergreen' (histórico/recurrente) de esta entidad.";
+        }
       }
-    }
 
-    // ---------------------------------------------------------
-    // 2. GENERACIÓN (OPENAI)
-    // ---------------------------------------------------------
-
-    const systemPrompt = `
+      systemPrompt = `
 Eres un redactor jefe de un medio digital en España.
 
 TU MISIÓN: Crear encuestas basadas en HECHOS REALES encontrados abajo.
@@ -333,8 +363,12 @@ FORMATO JSON:
     { "question": "¿Pregunta?", "options": ["Frase A", "Frase B", "Frase C", "Frase D"], "target_entity": "Nombre" }
   ]
 }
-    `;
+      `;
+    }
 
+    // ---------------------------------------------------------
+    // GENERACIÓN (OPENAI)
+    // ---------------------------------------------------------
     const aiModel = model || "gpt-4o-mini";
 
     const requestBody: any = {
@@ -343,7 +377,6 @@ FORMATO JSON:
       response_format: { type: "json_object" },
     };
 
-    // Ajuste de parámetros según modelo (gpt-5 / o1 vs modelos "clásicos")
     if (aiModel.includes("gpt-5") || aiModel.startsWith("o1")) {
       requestBody.max_completion_tokens = 4000;
     } else {
