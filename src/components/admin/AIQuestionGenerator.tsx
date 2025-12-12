@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Save, Loader2, Calendar as CalendarIcon, Trash2, Globe, Zap, Layers } from "lucide-react";
+import { Sparkles, Save, Loader2, Calendar as CalendarIcon, Trash2, Globe, Zap, Layers, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
@@ -33,6 +33,7 @@ export const AIQuestionGenerator = () => {
   const [module, setModule] = useState<"politica" | "futbol">("politica");
   const [aiModel, setAiModel] = useState("gpt-4o-mini");
   const [isBatchMode, setIsBatchMode] = useState(false);
+  const [isTimelessMode, setIsTimelessMode] = useState(false); // Nuevo: modo atemporal
 
   const [parties, setParties] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -57,14 +58,12 @@ export const AIQuestionGenerator = () => {
   }, []);
 
   const handleGenerate = async () => {
-    if (!isBatchMode && !selectedEntityId) {
+    if (!isTimelessMode && !isBatchMode && !selectedEntityId) {
       toast({ title: "Error", description: "Selecciona una entidad o activa el modo Lote.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
-    // Nota: Ya no limpiamos setResults([]) obligatoriamente, por si quieres acumular,
-    // pero para evitar confusión visual, lo mantenemos limpio por ahora.
     setResults([]);
 
     try {
@@ -73,12 +72,13 @@ export const AIQuestionGenerator = () => {
         topic: topic.trim(),
         module,
         model: aiModel,
-        mode: isBatchMode ? "batch" : "single",
+        mode: isTimelessMode ? "timeless" : (isBatchMode ? "batch" : "single"),
+        isTimeless: isTimelessMode,
       };
 
-      if (isBatchMode) {
+      if (isBatchMode && !isTimelessMode) {
         payload.entitiesList = entityList.map((e) => e.name);
-      } else {
+      } else if (!isTimelessMode && !isBatchMode) {
         payload.entity = entityList.find((e) => e.id === selectedEntityId)?.name || "Entidad";
       }
 
@@ -139,7 +139,7 @@ export const AIQuestionGenerator = () => {
       const qPayload: any = {
         text: q.question,
         module,
-        scope: q.target_entity_id ? "specific" : "general",
+        scope: isTimelessMode ? "timeless" : (q.target_entity_id ? "specific" : "general"),
         // Usamos la fecha ESPECÍFICA de esta tarjeta
         week_start_date: format(q.publicationDate, "yyyy-MM-dd"),
         is_mandatory: false,
@@ -206,13 +206,17 @@ export const AIQuestionGenerator = () => {
     <div className="grid gap-6 lg:grid-cols-12">
       {/* PANEL IZQUIERDO: CONFIGURACIÓN */}
       <div className="lg:col-span-4 space-y-4">
-        <Card className="border-l-4 border-l-primary shadow-md">
+        <Card className={`border-l-4 ${isTimelessMode ? 'border-l-amber-500' : 'border-l-primary'} shadow-md`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Globe className="w-5 h-5 text-blue-600" />
-              Redacción IA
+              <Globe className={`w-5 h-5 ${isTimelessMode ? 'text-amber-500' : 'text-blue-600'}`} />
+              {isTimelessMode ? 'Generador Atemporales' : 'Redacción IA'}
             </CardTitle>
-            <CardDescription>Busca noticias reales y genera debate.</CardDescription>
+            <CardDescription>
+              {isTimelessMode 
+                ? 'Genera debates clásicos que no dependen de la actualidad.'
+                : 'Busca noticias reales y genera debate.'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             {/* Modelo */}
@@ -252,17 +256,36 @@ export const AIQuestionGenerator = () => {
               </Select>
             </div>
 
-            <div className="flex items-center justify-between py-2">
-              <Label htmlFor="batch" className="flex flex-col cursor-pointer">
+            <div className="flex items-center justify-between py-2 border-b pb-3">
+              <Label htmlFor="timeless" className="flex flex-col cursor-pointer">
                 <span className="flex items-center gap-2">
-                  <Layers className="w-4 h-4" /> Modo Lote (Batch)
+                  <Clock className="w-4 h-4 text-amber-500" /> Modo Atemporal
                 </span>
-                <span className="font-normal text-xs text-muted-foreground">Generar batería completa de preguntas</span>
+                <span className="font-normal text-xs text-muted-foreground">Debates clásicos sin buscar noticias</span>
               </Label>
-              <Switch id="batch" checked={isBatchMode} onCheckedChange={setIsBatchMode} />
+              <Switch 
+                id="timeless" 
+                checked={isTimelessMode} 
+                onCheckedChange={(checked) => {
+                  setIsTimelessMode(checked);
+                  if (checked) setIsBatchMode(false);
+                }} 
+              />
             </div>
 
-            {!isBatchMode && (
+            {!isTimelessMode && (
+              <div className="flex items-center justify-between py-2">
+                <Label htmlFor="batch" className="flex flex-col cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Layers className="w-4 h-4" /> Modo Lote (Batch)
+                  </span>
+                  <span className="font-normal text-xs text-muted-foreground">Generar batería completa de preguntas</span>
+                </Label>
+                <Switch id="batch" checked={isBatchMode} onCheckedChange={setIsBatchMode} />
+              </div>
+            )}
+
+            {!isBatchMode && !isTimelessMode && (
               <div className="space-y-2 animate-in fade-in">
                 <Label>Entidad Específica</Label>
                 <Select value={selectedEntityId} onValueChange={setSelectedEntityId}>
@@ -281,10 +304,12 @@ export const AIQuestionGenerator = () => {
             )}
 
             <div className="space-y-2">
-              <Label>Tema / Búsqueda (Opcional)</Label>
+              <Label>{isTimelessMode ? 'Temática (Opcional)' : 'Tema / Búsqueda (Opcional)'}</Label>
               <Textarea
                 placeholder={
-                  isBatchMode ? "Ej: Escándalos recientes, Polémica arbitral..." : "Ej: Declaraciones de ayer..."
+                  isTimelessMode 
+                    ? "Ej: Horarios, tradiciones, leyes polémicas..." 
+                    : (isBatchMode ? "Ej: Escándalos recientes, Polémica arbitral..." : "Ej: Declaraciones de ayer...")
                 }
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
@@ -328,11 +353,13 @@ export const AIQuestionGenerator = () => {
 
             <Button
               onClick={handleGenerate}
-              disabled={loading || (!isBatchMode && !selectedEntityId)}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+              disabled={loading || (!isTimelessMode && !isBatchMode && !selectedEntityId)}
+              className={`w-full shadow-md text-white ${isTimelessMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
             >
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              {loading ? "Investigando..." : "Buscar y Generar"}
+              {loading 
+                ? (isTimelessMode ? "Generando debates..." : "Investigando...") 
+                : (isTimelessMode ? "Generar Atemporales" : "Buscar y Generar")}
             </Button>
           </CardContent>
         </Card>
@@ -448,17 +475,32 @@ export const AIQuestionGenerator = () => {
 
           {results.length === 0 && !loading && (
             <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-gray-800 rounded-lg bg-gray-900/20 text-muted-foreground">
-              <Globe className="w-12 h-12 mb-4 opacity-20" />
-              <p>Configura el agente a la izquierda para buscar noticias.</p>
+              {isTimelessMode ? (
+                <>
+                  <Clock className="w-12 h-12 mb-4 opacity-20" />
+                  <p>Genera debates atemporales sobre {module === 'politica' ? 'política' : 'fútbol'}.</p>
+                </>
+              ) : (
+                <>
+                  <Globe className="w-12 h-12 mb-4 opacity-20" />
+                  <p>Configura el agente a la izquierda para buscar noticias.</p>
+                </>
+              )}
             </div>
           )}
 
           {loading && (
             <div className="h-64 flex flex-col items-center justify-center space-y-4 text-center">
-              <Loader2 className="w-12 h-12 animate-spin text-blue-500" />
+              <Loader2 className={`w-12 h-12 animate-spin ${isTimelessMode ? 'text-amber-500' : 'text-blue-500'}`} />
               <div>
-                <p className="text-lg font-medium text-foreground">Analizando actualidad...</p>
-                <p className="text-sm text-muted-foreground">Leyendo periódicos digitales en busca de polémica.</p>
+                <p className="text-lg font-medium text-foreground">
+                  {isTimelessMode ? 'Pensando debates clásicos...' : 'Analizando actualidad...'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {isTimelessMode 
+                    ? 'Generando preguntas eternas que siempre generan debate.' 
+                    : 'Leyendo periódicos digitales en busca de polémica.'}
+                </p>
               </div>
             </div>
           )}

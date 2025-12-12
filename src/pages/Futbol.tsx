@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { WeeklySurveys } from "@/components/surveys/WeeklySurveys";
 import { WeeklyHistory } from "@/components/surveys/WeeklyHistory";
+import { TimelessSurveys } from "@/components/surveys/TimelessSurveys";
 
 export default function Futbol() {
   const { user, loading } = useAuth();
@@ -51,13 +52,18 @@ export default function Futbol() {
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <Tabs defaultValue="current" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="current">Esta Semana</TabsTrigger>
+            <TabsTrigger value="timeless">Atemporales</TabsTrigger>
             <TabsTrigger value="history">Historial</TabsTrigger>
           </TabsList>
 
           <TabsContent value="current">
             <WeeklySurveys module="futbol" userId={user.id} />
+          </TabsContent>
+
+          <TabsContent value="timeless">
+            <TimelessSurveys module="futbol" userId={user.id} />
           </TabsContent>
 
           <TabsContent value="history">
