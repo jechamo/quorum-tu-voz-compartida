@@ -22,7 +22,7 @@ interface GeneratedQuestion {
   options: string[];
   target_entity_id?: string;
   target_entity_name?: string;
-  publicationDate?: Date; // Nueva propiedad: Fecha individual por pregunta
+  publicationDate?: Date;
 }
 
 export const AIQuestionGenerator = () => {
@@ -31,20 +31,22 @@ export const AIQuestionGenerator = () => {
 
   // -- CONFIGURACIÓN --
   const [module, setModule] = useState<"politica" | "futbol">("politica");
+
+  // SOLO GPT-4o-mini y GPT-5-mini
   const [aiModel, setAiModel] = useState("gpt-4o-mini");
+
   const [isBatchMode, setIsBatchMode] = useState(false);
-  const [isTimelessMode, setIsTimelessMode] = useState(false); // Nuevo: modo atemporal
+  const [isTimelessMode, setIsTimelessMode] = useState(false);
 
   const [parties, setParties] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
 
-  // Inputs Globales (Valores por defecto)
+  // Inputs Globales
   const [selectedEntityId, setSelectedEntityId] = useState("");
   const [topic, setTopic] = useState("");
-  // Esta fecha ahora sirve como "Valor por defecto" para las nuevas generaciones
   const [defaultWeekStartDate, setDefaultWeekStartDate] = useState<Date | undefined>(new Date(getCurrentWeekStart()));
 
-  // Resultados (Lista)
+  // Resultados
   const [results, setResults] = useState<GeneratedQuestion[]>([]);
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export const AIQuestionGenerator = () => {
         topic: topic.trim(),
         module,
         model: aiModel,
-        mode: isTimelessMode ? "timeless" : (isBatchMode ? "batch" : "single"),
+        mode: isTimelessMode ? "timeless" : isBatchMode ? "batch" : "single",
         isTimeless: isTimelessMode,
       };
 
@@ -81,6 +83,8 @@ export const AIQuestionGenerator = () => {
       } else if (!isTimelessMode && !isBatchMode) {
         payload.entity = entityList.find((e) => e.id === selectedEntityId)?.name || "Entidad";
       }
+
+      console.log("Enviando a AI con modelo:", aiModel);
 
       const { data, error } = await supabase.functions.invoke("generate-ai-question", { body: payload });
 
@@ -110,12 +114,14 @@ export const AIQuestionGenerator = () => {
             options: item.options,
             target_entity_id: matchedId,
             target_entity_name: matchedName || (isBatchMode ? "General" : payload.entity),
-            // Asignamos la fecha por defecto seleccionada a la izquierda
             publicationDate: defaultWeekStartDate || new Date(),
           };
         });
         setResults(processed);
-        toast({ title: "¡Noticias analizadas!", description: `Se han generado ${processed.length} propuestas.` });
+        toast({
+          title: "¡Generación completada!",
+          description: `Se han generado ${processed.length} propuestas con ${aiModel}.`,
+        });
       }
     } catch (error: any) {
       console.error("Error:", error);
@@ -139,8 +145,7 @@ export const AIQuestionGenerator = () => {
       const qPayload: any = {
         text: q.question,
         module,
-        scope: isTimelessMode ? "timeless" : (q.target_entity_id ? "specific" : "general"),
-        // Usamos la fecha ESPECÍFICA de esta tarjeta
+        scope: isTimelessMode ? "timeless" : q.target_entity_id ? "specific" : "general",
         week_start_date: format(q.publicationDate, "yyyy-MM-dd"),
         is_mandatory: false,
       };
@@ -167,8 +172,6 @@ export const AIQuestionGenerator = () => {
     }
   };
 
-  // --- HELPERS DE EDICIÓN LOCAL ---
-
   const updateText = (id: string, field: "question" | "option", val: string, optIdx?: number) => {
     setResults((prev) =>
       prev.map((item) => {
@@ -181,18 +184,15 @@ export const AIQuestionGenerator = () => {
     );
   };
 
-  // Función para actualizar la fecha de UNA pregunta específica
   const updateQuestionDate = (id: string, date: Date | undefined) => {
     if (!date) return;
     const d = new Date(date);
     const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // Ajustar al lunes
+    const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
-
     setResults((prev) => prev.map((item) => (item.id === id ? { ...item, publicationDate: d } : item)));
   };
 
-  // Función para el selector global (izquierda)
   const handleDefaultDateSelect = (date: Date | undefined) => {
     if (!date) return;
     const d = new Date(date);
@@ -206,20 +206,20 @@ export const AIQuestionGenerator = () => {
     <div className="grid gap-6 lg:grid-cols-12">
       {/* PANEL IZQUIERDO: CONFIGURACIÓN */}
       <div className="lg:col-span-4 space-y-4">
-        <Card className={`border-l-4 ${isTimelessMode ? 'border-l-amber-500' : 'border-l-primary'} shadow-md`}>
+        <Card className={`border-l-4 ${isTimelessMode ? "border-l-amber-500" : "border-l-primary"} shadow-md`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Globe className={`w-5 h-5 ${isTimelessMode ? 'text-amber-500' : 'text-blue-600'}`} />
-              {isTimelessMode ? 'Generador Atemporales' : 'Redacción IA'}
+              <Globe className={`w-5 h-5 ${isTimelessMode ? "text-amber-500" : "text-blue-600"}`} />
+              {isTimelessMode ? "Generador Atemporales" : "Redacción IA"}
             </CardTitle>
             <CardDescription>
-              {isTimelessMode 
-                ? 'Genera debates clásicos que no dependen de la actualidad.'
-                : 'Busca noticias reales y genera debate.'}
+              {isTimelessMode
+                ? "Genera debates clásicos que no dependen de la actualidad."
+                : "Busca noticias reales y genera debate."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* Modelo */}
+            {/* Modelo Selector */}
             <div className="flex items-center justify-between bg-muted/40 p-2 rounded border">
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-500" />
@@ -230,8 +230,8 @@ export const AIQuestionGenerator = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="gpt-4o-mini">GPT-4o Mini (Rápido)</SelectItem>
-                  <SelectItem value="gpt-5-mini">GPT-5 Mini (Preview)</SelectItem>
+                  <SelectItem value="gpt-4o-mini">GPT-4o Mini (Estable)</SelectItem>
+                  <SelectItem value="gpt-5-mini">GPT-5 Mini (Potente)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -263,13 +263,13 @@ export const AIQuestionGenerator = () => {
                 </span>
                 <span className="font-normal text-xs text-muted-foreground">Debates clásicos sin buscar noticias</span>
               </Label>
-              <Switch 
-                id="timeless" 
-                checked={isTimelessMode} 
+              <Switch
+                id="timeless"
+                checked={isTimelessMode}
                 onCheckedChange={(checked) => {
                   setIsTimelessMode(checked);
                   if (checked) setIsBatchMode(false);
-                }} 
+                }}
               />
             </div>
 
@@ -279,7 +279,9 @@ export const AIQuestionGenerator = () => {
                   <span className="flex items-center gap-2">
                     <Layers className="w-4 h-4" /> Modo Lote (Batch)
                   </span>
-                  <span className="font-normal text-xs text-muted-foreground">Generar batería completa de preguntas</span>
+                  <span className="font-normal text-xs text-muted-foreground">
+                    Generar batería completa de preguntas
+                  </span>
                 </Label>
                 <Switch id="batch" checked={isBatchMode} onCheckedChange={setIsBatchMode} />
               </div>
@@ -304,12 +306,14 @@ export const AIQuestionGenerator = () => {
             )}
 
             <div className="space-y-2">
-              <Label>{isTimelessMode ? 'Temática (Opcional)' : 'Tema / Búsqueda (Opcional)'}</Label>
+              <Label>{isTimelessMode ? "Temática (Opcional)" : "Tema / Búsqueda (Opcional)"}</Label>
               <Textarea
                 placeholder={
-                  isTimelessMode 
-                    ? "Ej: Horarios, tradiciones, leyes polémicas..." 
-                    : (isBatchMode ? "Ej: Escándalos recientes, Polémica arbitral..." : "Ej: Declaraciones de ayer...")
+                  isTimelessMode
+                    ? "Ej: Horarios, tradiciones, leyes polémicas..."
+                    : isBatchMode
+                      ? "Ej: Escándalos recientes, Polémica arbitral..."
+                      : "Ej: Declaraciones de ayer..."
                 }
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
@@ -354,12 +358,16 @@ export const AIQuestionGenerator = () => {
             <Button
               onClick={handleGenerate}
               disabled={loading || (!isTimelessMode && !isBatchMode && !selectedEntityId)}
-              className={`w-full shadow-md text-white ${isTimelessMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+              className={`w-full shadow-md text-white ${isTimelessMode ? "bg-amber-600 hover:bg-amber-700" : "bg-blue-600 hover:bg-blue-700"}`}
             >
               {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-              {loading 
-                ? (isTimelessMode ? "Generando debates..." : "Investigando...") 
-                : (isTimelessMode ? "Generar Atemporales" : "Buscar y Generar")}
+              {loading
+                ? isTimelessMode
+                  ? "Generando debates..."
+                  : "Investigando..."
+                : isTimelessMode
+                  ? "Generar Atemporales"
+                  : "Buscar y Generar"}
             </Button>
           </CardContent>
         </Card>
@@ -427,7 +435,6 @@ export const AIQuestionGenerator = () => {
                   </div>
                 </div>
 
-                {/* --- FOOTER DE LA TARJETA: FECHA INDIVIDUAL Y PUBLICAR --- */}
                 <div className="pt-4 mt-2 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-end sm:items-center gap-4">
                   <div className="flex flex-col gap-1 w-full sm:w-auto">
                     <Label className="text-xs text-muted-foreground">Fecha de publicación (Lunes)</Label>
@@ -478,7 +485,7 @@ export const AIQuestionGenerator = () => {
               {isTimelessMode ? (
                 <>
                   <Clock className="w-12 h-12 mb-4 opacity-20" />
-                  <p>Genera debates atemporales sobre {module === 'politica' ? 'política' : 'fútbol'}.</p>
+                  <p>Genera debates atemporales sobre {module === "politica" ? "política" : "fútbol"}.</p>
                 </>
               ) : (
                 <>
@@ -491,16 +498,17 @@ export const AIQuestionGenerator = () => {
 
           {loading && (
             <div className="h-64 flex flex-col items-center justify-center space-y-4 text-center">
-              <Loader2 className={`w-12 h-12 animate-spin ${isTimelessMode ? 'text-amber-500' : 'text-blue-500'}`} />
+              <Loader2 className={`w-12 h-12 animate-spin ${isTimelessMode ? "text-amber-500" : "text-blue-500"}`} />
               <div>
                 <p className="text-lg font-medium text-foreground">
-                  {isTimelessMode ? 'Pensando debates clásicos...' : 'Analizando actualidad...'}
+                  {isTimelessMode ? "Pensando debates clásicos..." : "Analizando actualidad..."}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {isTimelessMode 
-                    ? 'Generando preguntas eternas que siempre generan debate.' 
-                    : 'Leyendo periódicos digitales en busca de polémica.'}
+                  {isTimelessMode
+                    ? "Generando preguntas eternas que siempre generan debate."
+                    : "Leyendo periódicos digitales en busca de polémica."}
                 </p>
+                <p className="text-xs text-muted-foreground mt-2 font-mono">Modelo: {aiModel}</p>
               </div>
             </div>
           )}
