@@ -301,6 +301,7 @@ export const SurveyStats = () => {
     // Obtener todas las respuestas con información del usuario
     const questionIds = stats.map((s) => s.id);
     
+    // CORRECCIÓN APLICADA AQUÍ: Se cambió "profiles:user_id" por "profiles"
     const { data: answers } = await supabase
       .from("user_answers")
       .select(`
@@ -309,7 +310,7 @@ export const SurveyStats = () => {
         answer_option_id,
         answered_at,
         answer_options!inner(text, question_id),
-        profiles:user_id(username, age, gender, party_id, team_id)
+        profiles(username, age, gender, party_id, team_id)
       `)
       .in("question_id", questionIds);
 
