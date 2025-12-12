@@ -23,8 +23,21 @@ function isResultRelevantToEntity(result: any, entity: string, module: string): 
   if (text.includes(ent)) return true;
 
   const blacklist = new Set([
-    "athletic", "club", "real", "city", "united", "cf", "fc", "cd", "sc",
-    "deportivo", "sporting", "partido", "popular", "socialista", "españa",
+    "athletic",
+    "club",
+    "real",
+    "city",
+    "united",
+    "cf",
+    "fc",
+    "cd",
+    "sc",
+    "deportivo",
+    "sporting",
+    "partido",
+    "popular",
+    "socialista",
+    "españa",
   ]);
 
   let tokens = ent.split(/\s+/).filter((t) => t.length > 3);
@@ -142,13 +155,10 @@ function formatResultsBlock(results: any[]): string {
  * Genera el prompt para preguntas ATEMPORALES (sin noticias)
  */
 function getTimelessSystemPrompt(module: string, topic?: string): string {
-  const moduleContext = module === "politica" 
-    ? "política española y debates sociales"
-    : "fútbol español, LaLiga y cultura futbolística";
+  const moduleContext =
+    module === "politica" ? "política española y debates sociales" : "fútbol español, LaLiga y cultura futbolística";
 
-  const topicHint = topic 
-    ? `El usuario quiere enfocarse en: "${topic}". Incorpora este tema si es relevante.`
-    : "";
+  const topicHint = topic ? `El usuario quiere enfocarse en: "${topic}". Incorpora este tema si es relevante.` : "";
 
   return `
 Eres un experto en crear debates y encuestas sobre ${moduleContext}.
@@ -160,10 +170,13 @@ CARACTERÍSTICAS DE LAS PREGUNTAS ATEMPORALES:
 - NO dependen de eventos actuales ni de noticias recientes
 - Son cuestiones FILOSÓFICAS, ÉTICAS o de OPINIÓN sobre el tema
 - Pueden repetirse semana tras semana porque son eternas
+- NO SACAR temas de actualidad
 
 ${topicHint}
 
-${module === "politica" ? `
+${
+  module === "politica"
+    ? `
 EJEMPLOS DE TEMAS ATEMPORALES EN POLÍTICA:
 - Cambio horario en España
 - Monarquía vs República
@@ -181,7 +194,8 @@ EJEMPLOS DE TEMAS ATEMPORALES EN POLÍTICA:
 - Voto obligatorio
 - Límite de mandatos
 - Aforamientos políticos
-` : `
+`
+    : `
 EJEMPLOS DE TEMAS ATEMPORALES EN FÚTBOL:
 - VAR: ¿mejora o arruina el fútbol?
 - Fichajes millonarios vs cantera
@@ -198,7 +212,8 @@ EJEMPLOS DE TEMAS ATEMPORALES EN FÚTBOL:
 - Fair play financiero
 - Nacionalización de jugadores
 - Mundiales cada 2 años
-`}
+`
+}
 
 GENERA 5 PREGUNTAS ATEMPORALES variadas.
 
@@ -255,8 +270,14 @@ serve(async (req) => {
         effectiveModule === "futbol"
           ? ["marca.com", "as.com", "mundodeportivo.com", "sport.es", "relevo.com", "elpais.com"]
           : [
-              "elpais.com", "elmundo.es", "elconfidencial.com", "okdiario.com",
-              "eldiario.es", "abc.es", "elespanol.com", "lavanguardia.com",
+              "elpais.com",
+              "elmundo.es",
+              "elconfidencial.com",
+              "okdiario.com",
+              "eldiario.es",
+              "abc.es",
+              "elespanol.com",
+              "lavanguardia.com",
             ];
 
       let contextNews = "";
