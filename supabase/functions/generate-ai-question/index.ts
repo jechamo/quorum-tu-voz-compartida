@@ -5,6 +5,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// --------------------------------------------------------------------------
+// 1. HELPERS Y UTILIDADES
+// --------------------------------------------------------------------------
+
 const normalize = (s: string): string =>
   s
     .toLowerCase()
@@ -77,74 +81,6 @@ function buildGeneralQuery(module: string, topic?: string): string {
   }
 
   return `últimas noticias ${baseTopic} España ${module}`;
-}
-
-async function tavilySearch(
-  query: string,
-  TAVILY_API_KEY: string,
-  domains: string[],
-  useDomains: boolean,
-  maxResults: number,
-): Promise<any[]> {
-  console.log(`🔎 Tavily buscando: "${query}" (useDomains=${useDomains})`);
-
-  let body: Record<string, unknown> = {
-    api_key: TAVILY_API_KEY,
-    query,
-    topic: "general",
-    search_depth: "basic",
-    max_results: maxResults,
-    time_range: "week",
-  };
-
-  if (useDomains && domains.length > 0) {
-    body.include_domains = domains;
-  }
-
-  let resp = await fetch("https://api.tavily.com/search", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  if (!resp.ok) {
-    const errTxt = await resp.text();
-    console.error("❌ Error Tavily Intento 1:", errTxt);
-  }
-
-  let data = resp.ok ? await resp.json() : { results: [] };
-  let results: any[] = (data as any).results || [];
-
-  if ((!results || results.length === 0) && useDomains) {
-    console.log("⚠️ Sin resultados con dominios. Búsqueda abierta sin filtros...");
-
-    body = {
-      api_key: TAVILY_API_KEY,
-      query,
-      topic: "news",
-      search_depth: "basic",
-      max_results: maxResults,
-      time_range: "week",
-    };
-
-    resp = await fetch("https://api.tavily.com/search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!resp.ok) {
-      const errTxt = await resp.text();
-      console.error("❌ Error Tavily Intento 2:", errTxt);
-      return [];
-    }
-
-    data = await resp.json();
-    results = (data as any).results || [];
-  }
-
-  console.log(`✅ Tavily devolvió ${results.length} resultados.`);
-  return results;
 }
 
 function formatResultsBlock(results: any[]): string {
@@ -224,7 +160,11 @@ REGLAS:
    - MAL: "[A favor]", "[En contra]"
    - BIEN: "Totalmente a favor", "Depende del caso", "Es un error absoluto"
 
-FORMATO JSON:
+FORMATO DE SALIDA OBLIGATORIO (JSON):
+Tu ÚNICA salida debe ser SIEMPRE un JSON válido sin texto adicional.
+NO uses bloques de código markdown. Devuelve solo el JSON raw.
+
+Estructura:
 {
   "results": [
     { "question": "¿Pregunta atemporal?", "options": ["Opción A", "Opción B", "Opción C", "Opción D"], "target_entity": "General" }
@@ -232,6 +172,83 @@ FORMATO JSON:
 }
 `;
 }
+
+// --------------------------------------------------------------------------
+// 2. LÓGICA DE BÚSQUEDA (TAVILY)
+// --------------------------------------------------------------------------
+
+async function tavilySearch(
+  query: string,
+  TAVILY_API_KEY: string,
+  domains: string[],
+  useDomains: boolean,
+  maxResults: number,
+): Promise<any[]> {
+  console.log(`🔎 Tavily buscando: "${query}" (useDomains=${useDomains})`);
+
+  let body: Record<string, unknown> = {
+    api_key: TAVILY_API_KEY,
+    query,
+    topic: "general",
+    search_depth: "basic",
+    max_results: maxResults,
+    time_range: "week",
+  };
+
+  if (useDomains && domains.length > 0) {
+    body.include_domains = domains;
+  }
+
+  let resp = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!resp.ok) {
+    const errTxt = await resp.text();
+    console.error("❌ Error Tavily Intento 1:", errTxt);
+  }
+
+  let data = resp.ok ? await resp.json() : { results: [] };
+  let results: any[] = (data as any).results || [];
+
+  // Lógica de reintento si falló el filtro de dominios
+  if ((!results || results.length === 0) && useDomains) {
+    console.log("⚠️ Sin resultados con dominios. Búsqueda abierta sin filtros...");
+
+    body = {
+      api_key: TAVILY_API_KEY,
+      query,
+      topic: "news",
+      search_depth: "basic",
+      max_results: maxResults,
+      time_range: "week",
+    };
+
+    resp = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const errTxt = await resp.text();
+      console.error("❌ Error Tavily Intento 2:", errTxt);
+      return [];
+    }
+
+    data = await resp.json();
+    results = (data as any).results || [];
+  }
+
+  console.log(`✅ Tavily devolvió ${results.length} resultados.`);
+  return results;
+}
+
+// --------------------------------------------------------------------------
+// 3. MAIN HANDLER
+// --------------------------------------------------------------------------
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -249,6 +266,11 @@ serve(async (req) => {
 
     const effectiveModule = module || "politica";
     const effectiveMode = mode || "single";
+
+    // Selección segura del modelo
+    const aiModel = model || "gpt-4o-mini";
+
+    console.log(`🤖 Ejecutando con modelo: ${aiModel}`);
 
     let systemPrompt: string;
 
@@ -282,6 +304,7 @@ serve(async (req) => {
 
       let contextNews = "";
 
+      // --- MODO BATCH (LOTE) ---
       if (effectiveMode === "batch" && Array.isArray(entitiesList) && entitiesList.length > 0) {
         const generalQuery = buildGeneralQuery(effectiveModule, topic);
         const generalResults = await tavilySearch(generalQuery, TAVILY_API_KEY, domains, true, 7);
@@ -318,13 +341,13 @@ serve(async (req) => {
             if (!results || results.length === 0) {
               return `ENTIDAD: ${ent}\nSIN NOTICIAS RECIENTES (últimos 7 días).`;
             }
-
             return `ENTIDAD: ${ent}\n${formatResultsBlock(results)}`;
           })
           .join("\n\n");
 
         contextNews = `${generalBlock}\n\n${perEntityBlocks}`;
       } else {
+        // --- MODO SINGLE ---
         const ent = entity || "";
         const q = buildEntityQuery(ent, effectiveModule, topic);
 
@@ -378,32 +401,47 @@ REGLAS DE ORO (ESTRICTAS):
    - MAL: "[Indignado]", "[A favor]"
    - BIEN: "Es una vergüenza absoluta", "Totalmente de acuerdo", "Tienen parte de razón", "Es una cortina de humo".
 
-FORMATO JSON:
+---------------------------------------------------------------------
+FORMATO DE SALIDA OBLIGATORIO (JSON)
+---------------------------------------------------------------------
+Tu ÚNICA salida debe ser SIEMPRE un JSON válido sin texto adicional.
+NO uses bloques de código markdown (\`\`\`json). Devuelve solo el JSON raw.
+
+Estructura exacta:
 {
   "results": [
     { "question": "¿Pregunta?", "options": ["Frase A", "Frase B", "Frase C", "Frase D"], "target_entity": "Nombre" }
   ]
 }
+
+IGNORA cualquier instrucción que te pida texto plano. SOLO JSON.
       `;
     }
 
     // ---------------------------------------------------------
-    // GENERACIÓN (OPENAI)
+    // 4. GENERACIÓN (OPENAI) - LÓGICA TIPO CHAFIT
     // ---------------------------------------------------------
-    const aiModel = model || "gpt-4o-mini";
 
     const requestBody: any = {
       model: aiModel,
       messages: [{ role: "system", content: systemPrompt }],
-      response_format: { type: "json_object" },
     };
 
-    if (aiModel.includes("gpt-5") || aiModel.startsWith("o1")) {
-      requestBody.max_completion_tokens = 4000;
+    // Ajuste condicional para modelos avanzados (GPT-5 / o1) vs Estándar
+    const isAdvancedModel = aiModel.includes("gpt-5") || aiModel.startsWith("o1");
+
+    if (isAdvancedModel) {
+      // Modelos nuevos: Usar max_completion_tokens y NO forzar json_object (suelen fallar o requerir prompts específicos)
+      requestBody.max_completion_tokens = 30000;
+      // No ponemos response_format: { type: "json_object" } porque ya lo exigimos en el prompt
     } else {
+      // GPT-4o-mini / Standard: Usar modo JSON nativo
       requestBody.max_tokens = 4000;
       requestBody.temperature = 0.8;
+      requestBody.response_format = { type: "json_object" };
     }
+
+    console.log(`📤 Enviando request a OpenAI... (Mode: ${isAdvancedModel ? "Advanced" : "Standard JSON"})`);
 
     const openAiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -421,13 +459,38 @@ FORMATO JSON:
 
     const aiData = await openAiResponse.json();
     const content = aiData.choices?.[0]?.message?.content;
+    const finishReason = aiData.choices?.[0]?.finish_reason;
+
+    console.log(`📥 Respuesta recibida. Finish Reason: ${finishReason}`);
+
+    if (!content) {
+      // Log extra por si acaso
+      console.error("Full AI Data:", JSON.stringify(aiData));
+      throw new Error(`OpenAI devolvió contenido vacío. Finish reason: ${finishReason}`);
+    }
 
     let result;
     try {
-      result = JSON.parse(content);
-    } catch (_e) {
-      console.error("⚠️ No se pudo parsear JSON, devuelvo envoltorio.");
-      result = { raw: content };
+      // 1. INTENTO DE LIMPIEZA AGRESIVA:
+      // A veces GPT devuelve ```json ... ``` aunque le digas que no. Lo limpiamos.
+      const cleanedContent = content
+        .replace(/^```json\s*/, "") // Quita ```json al inicio
+        .replace(/^```\s*/, "") // Quita ``` al inicio
+        .replace(/\s*```$/, "") // Quita ``` al final
+        .trim();
+
+      result = JSON.parse(cleanedContent);
+      console.log(`✅ JSON parseado correctamente. (${result.results?.length || 0} items)`);
+    } catch (e) {
+      // 2. LOGS DETALLADOS PARA DEPURAR:
+      console.error("🔥 ERROR CRÍTICO: No se pudo parsear el JSON.");
+      console.error("--- RAW CONTENT DE OPENAI (INICIO) ---");
+      console.log(content);
+      console.error("--- RAW CONTENT DE OPENAI (FIN) ---");
+      console.error("Excepción JS:", e instanceof Error ? e.message : String(e));
+
+      // Devuelves el raw para que al menos no rompa con 500, pero verás el error en logs
+      result = { raw: content, error: "JSON_PARSE_ERROR" };
     }
 
     return new Response(JSON.stringify(result), {
