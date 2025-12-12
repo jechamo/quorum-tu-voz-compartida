@@ -1,27 +1,44 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getCurrentWeekStart } from "@/lib/dateUtils";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Download, Clock } from "lucide-react";
 import { StatsFilters, FilterState, AGE_RANGES } from "../surveys/StatsFilters";
+import { format, subMonths } from "date-fns";
+import * as XLSX from "xlsx";
+import { useToast } from "@/hooks/use-toast";
 
 interface StatsContentProps {
   stats: any[];
   color: string;
   module: "politica" | "futbol";
   onFiltersChange: (filters: FilterState) => void;
+  onDownload: () => void;
+  loading: boolean;
 }
 
-const StatsContent = ({ stats, color, module, onFiltersChange }: StatsContentProps) => {
+const StatsContent = ({ stats, color, module, onFiltersChange, onDownload, loading }: StatsContentProps) => {
   return (
     <div className="space-y-6">
-      <StatsFilters module={module} onFiltersChange={onFiltersChange} />
+      <StatsFilters 
+        module={module} 
+        onFiltersChange={onFiltersChange} 
+        showDateRange={true}
+        showScopeFilter={true}
+      />
+
+      <div className="flex justify-end">
+        <Button onClick={onDownload} disabled={stats.length === 0 || loading} variant="outline" className="gap-2">
+          <Download className="w-4 h-4" />
+          Descargar Excel
+        </Button>
+      </div>
 
       {stats.length === 0 ? (
         <Card className="p-8 text-center bg-card">
           <BarChart3 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-muted-foreground">No hay estadísticas disponibles para esta semana</p>
+          <p className="text-muted-foreground">No hay estadísticas disponibles para los filtros seleccionados</p>
         </Card>
       ) : (
         <>
@@ -29,6 +46,27 @@ const StatsContent = ({ stats, color, module, onFiltersChange }: StatsContentPro
             <Card key={question.id} className="p-6 bg-card">
               <div className="space-y-4">
                 <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    {question.scope === "timeless" && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Atemporal
+                      </span>
+                    )}
+                    {question.scope === "specific" && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600">
+                        Específica
+                      </span>
+                    )}
+                    {question.scope === "general" && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-600">
+                        General
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {format(new Date(question.week_start_date), "dd/MM/yyyy")}
+                    </span>
+                  </div>
                   <h3 className="text-lg font-semibold text-foreground mb-1">{question.text}</h3>
                   <p className="text-sm text-muted-foreground">Total de respuestas: {question.totalAnswers}</p>
                 </div>
@@ -59,15 +97,22 @@ const StatsContent = ({ stats, color, module, onFiltersChange }: StatsContentPro
 };
 
 export const SurveyStats = () => {
+  const { toast } = useToast();
   const [politicaStats, setPoliticaStats] = useState<any[]>([]);
   const [futbolStats, setFutbolStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  // Estado inicial actualizado a la nueva estructura (Arrays)
+  const [parties, setParties] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+
   const [politicaFilters, setPoliticaFilters] = useState<FilterState>({
     partyIds: [],
     teamIds: [],
     gender: null,
     ageRanges: [],
+    dateFrom: subMonths(new Date(), 1),
+    dateTo: new Date(),
+    scope: null,
   });
 
   const [futbolFilters, setFutbolFilters] = useState<FilterState>({
@@ -75,23 +120,49 @@ export const SurveyStats = () => {
     teamIds: [],
     gender: null,
     ageRanges: [],
+    dateFrom: subMonths(new Date(), 1),
+    dateTo: new Date(),
+    scope: null,
   });
 
   const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
 
+  useEffect(() => {
+    loadEntities();
+  }, []);
+
+  const loadEntities = async () => {
+    const [partiesRes, teamsRes] = await Promise.all([
+      supabase.from("parties").select("*").order("name"),
+      supabase.from("teams").select("*").order("name"),
+    ]);
+    if (partiesRes.data) setParties(partiesRes.data);
+    if (teamsRes.data) setTeams(teamsRes.data);
+  };
+
   const loadStats = useCallback(async (filters: { politica: FilterState; futbol: FilterState }) => {
-    const weekStart = getCurrentWeekStart();
+    setLoading(true);
 
     // --- CARGAR ESTADÍSTICAS POLÍTICA ---
-    const { data: politicaQuestions } = await supabase
+    let politicaQuery = supabase
       .from("questions")
       .select("*, answer_options(*)")
-      .eq("module", "politica")
-      .eq("week_start_date", weekStart);
+      .eq("module", "politica");
+
+    if (filters.politica.dateFrom) {
+      politicaQuery = politicaQuery.gte("week_start_date", format(filters.politica.dateFrom, "yyyy-MM-dd"));
+    }
+    if (filters.politica.dateTo) {
+      politicaQuery = politicaQuery.lte("week_start_date", format(filters.politica.dateTo, "yyyy-MM-dd"));
+    }
+    if (filters.politica.scope) {
+      politicaQuery = politicaQuery.eq("scope", filters.politica.scope as "general" | "specific" | "timeless");
+    }
+
+    const { data: politicaQuestions } = await politicaQuery.order("week_start_date", { ascending: false });
 
     if (politicaQuestions) {
       const statsPromises = politicaQuestions.map(async (q) => {
-        // Preparar filtros de edad política
         let ageMinsP: number[] | null = null;
         let ageMaxsP: number[] | null = null;
         if (filters.politica.ageRanges.length > 0) {
@@ -137,15 +208,25 @@ export const SurveyStats = () => {
     }
 
     // --- CARGAR ESTADÍSTICAS FÚTBOL ---
-    const { data: futbolQuestions } = await supabase
+    let futbolQuery = supabase
       .from("questions")
       .select("*, answer_options(*)")
-      .eq("module", "futbol")
-      .eq("week_start_date", weekStart);
+      .eq("module", "futbol");
+
+    if (filters.futbol.dateFrom) {
+      futbolQuery = futbolQuery.gte("week_start_date", format(filters.futbol.dateFrom, "yyyy-MM-dd"));
+    }
+    if (filters.futbol.dateTo) {
+      futbolQuery = futbolQuery.lte("week_start_date", format(filters.futbol.dateTo, "yyyy-MM-dd"));
+    }
+    if (filters.futbol.scope) {
+      futbolQuery = futbolQuery.eq("scope", filters.futbol.scope as "general" | "specific" | "timeless");
+    }
+
+    const { data: futbolQuestions } = await futbolQuery.order("week_start_date", { ascending: false });
 
     if (futbolQuestions) {
       const statsPromises = futbolQuestions.map(async (q) => {
-        // Preparar filtros de edad fútbol
         let ageMinsF: number[] | null = null;
         let ageMaxsF: number[] | null = null;
         if (filters.futbol.ageRanges.length > 0) {
@@ -189,9 +270,10 @@ export const SurveyStats = () => {
       const stats = await Promise.all(statsPromises);
       setFutbolStats(stats);
     }
+
+    setLoading(false);
   }, []);
 
-  // Initial load
   useEffect(() => {
     if (!hasLoadedInitial) {
       loadStats({ politica: politicaFilters, futbol: futbolFilters });
@@ -215,11 +297,132 @@ export const SurveyStats = () => {
     [loadStats, politicaFilters],
   );
 
+  const generateExcelData = async (module: "politica" | "futbol", stats: any[], filters: FilterState) => {
+    // Obtener todas las respuestas con información del usuario
+    const questionIds = stats.map((s) => s.id);
+    
+    const { data: answers } = await supabase
+      .from("user_answers")
+      .select(`
+        id,
+        question_id,
+        answer_option_id,
+        answered_at,
+        answer_options!inner(text, question_id),
+        profiles:user_id(username, age, gender, party_id, team_id)
+      `)
+      .in("question_id", questionIds);
+
+    if (!answers || answers.length === 0) {
+      toast({ title: "Sin datos", description: "No hay respuestas para exportar", variant: "destructive" });
+      return null;
+    }
+
+    // Crear filas para Excel
+    const rows = answers.map((answer: any) => {
+      const question = stats.find((s) => s.id === answer.question_id);
+      const partyName = answer.profiles?.party_id 
+        ? parties.find((p) => p.id === answer.profiles.party_id)?.name || "N/A"
+        : "N/A";
+      const teamName = answer.profiles?.team_id 
+        ? teams.find((t) => t.id === answer.profiles.team_id)?.name || "N/A"
+        : "N/A";
+
+      return {
+        "Pregunta": question?.text || "N/A",
+        "Tipo": question?.scope === "timeless" ? "Atemporal" : question?.scope === "specific" ? "Específica" : "General",
+        "Fecha Pregunta": question?.week_start_date || "N/A",
+        "Respuesta": answer.answer_options?.text || "N/A",
+        "Usuario": answer.profiles?.username || "Anónimo",
+        "Edad": answer.profiles?.age || "N/A",
+        "Sexo": answer.profiles?.gender || "N/A",
+        "Partido Político": partyName,
+        "Equipo de Fútbol": teamName,
+        "Fecha Respuesta": answer.answered_at ? format(new Date(answer.answered_at), "dd/MM/yyyy HH:mm") : "N/A",
+      };
+    });
+
+    return rows;
+  };
+
+  const handleDownloadPolitica = async () => {
+    setLoading(true);
+    try {
+      const data = await generateExcelData("politica", politicaStats, politicaFilters);
+      if (!data) {
+        setLoading(false);
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Política");
+
+      // Ajustar anchos de columna
+      const colWidths = [
+        { wch: 50 }, // Pregunta
+        { wch: 12 }, // Tipo
+        { wch: 12 }, // Fecha Pregunta
+        { wch: 30 }, // Respuesta
+        { wch: 15 }, // Usuario
+        { wch: 8 },  // Edad
+        { wch: 12 }, // Sexo
+        { wch: 20 }, // Partido
+        { wch: 20 }, // Equipo
+        { wch: 18 }, // Fecha Respuesta
+      ];
+      worksheet["!cols"] = colWidths;
+
+      XLSX.writeFile(workbook, `estadisticas_politica_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+      toast({ title: "Éxito", description: "Excel descargado correctamente" });
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      toast({ title: "Error", description: "No se pudo generar el Excel", variant: "destructive" });
+    }
+    setLoading(false);
+  };
+
+  const handleDownloadFutbol = async () => {
+    setLoading(true);
+    try {
+      const data = await generateExcelData("futbol", futbolStats, futbolFilters);
+      if (!data) {
+        setLoading(false);
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Fútbol");
+
+      const colWidths = [
+        { wch: 50 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 30 },
+        { wch: 15 },
+        { wch: 8 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 18 },
+      ];
+      worksheet["!cols"] = colWidths;
+
+      XLSX.writeFile(workbook, `estadisticas_futbol_${format(new Date(), "yyyy-MM-dd")}.xlsx`);
+      toast({ title: "Éxito", description: "Excel descargado correctamente" });
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      toast({ title: "Error", description: "No se pudo generar el Excel", variant: "destructive" });
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-display font-bold text-foreground mb-2">Estadísticas de Encuestas</h2>
-        <p className="text-muted-foreground">Resultados de las encuestas de esta semana</p>
+        <p className="text-muted-foreground">Filtra por rango de fechas, tipo de pregunta y demografía</p>
       </div>
 
       <Tabs defaultValue="politica" className="w-full">
@@ -234,6 +437,8 @@ export const SurveyStats = () => {
             color="bg-primary"
             module="politica"
             onFiltersChange={handlePoliticaFiltersChange}
+            onDownload={handleDownloadPolitica}
+            loading={loading}
           />
         </TabsContent>
 
@@ -243,6 +448,8 @@ export const SurveyStats = () => {
             color="bg-secondary"
             module="futbol"
             onFiltersChange={handleFutbolFiltersChange}
+            onDownload={handleDownloadFutbol}
+            loading={loading}
           />
         </TabsContent>
       </Tabs>
