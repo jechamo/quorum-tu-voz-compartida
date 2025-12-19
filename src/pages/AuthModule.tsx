@@ -30,6 +30,7 @@ export default function AuthModule() {
   const [loginMethod, setLoginMethod] = useState<"email" | "phone">("email");
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [resetIdentifier, setResetIdentifier] = useState("");
 
   // Signup form
   const [signupMethod, setSignupMethod] = useState<"email" | "phone">("email");
@@ -202,6 +203,24 @@ export default function AuthModule() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!resetIdentifier) {
+      toast({ title: "Error", description: "Ingresa tu email o teléfono", variant: "destructive" });
+      return;
+    }
+    const email = resetIdentifier.includes("@") ? resetIdentifier : `${resetIdentifier}@quorum.app`;
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Correo enviado", description: "Revisa tu bandeja para restablecer tu contraseña" });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-elevated bg-card">
@@ -302,6 +321,25 @@ export default function AuthModule() {
                     )}
                   </Button>
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reset-id">¿Olvidaste tu contraseña?</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="reset-id"
+                    type="text"
+                    placeholder="Tu email o teléfono"
+                    value={resetIdentifier}
+                    onChange={(e) => setResetIdentifier(e.target.value)}
+                    disabled={loading}
+                  />
+                  <Button type="button" variant="outline" onClick={handleResetPassword} disabled={loading}>
+                    Enviar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Si te registraste con teléfono, introduce tu número; enviaremos un enlace al email asociado.
+                </p>
               </div>
               <Button
                 type="submit"

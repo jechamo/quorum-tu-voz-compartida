@@ -11,6 +11,8 @@ import Admin from "./pages/Admin";
 import Politica from "./pages/Politica";
 import Futbol from "./pages/Futbol";
 import NotFound from "./pages/NotFound";
+import Account from "./pages/Account";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,8 @@ const App = () => (
             <Route path="/home" element={<Index />} />
             <Route path="/auth" element={<AuthModule />} />
             <Route path="/auth/:module" element={<AuthModule />} />
+            <Route path="/account" element={<Account />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/politica" element={<Politica />} />
             <Route path="/futbol" element={<Futbol />} />
