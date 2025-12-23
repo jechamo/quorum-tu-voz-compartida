@@ -97,80 +97,80 @@ function getTimelessSystemPrompt(module: string, topic?: string): string {
   const topicHint = topic ? `El usuario quiere enfocarse en: "${topic}". Incorpora este tema si es relevante.` : "";
 
   return `
-  Eres un experto en crear debates y encuestas sobre ${moduleContext}.
+Eres un experto en crear debates y encuestas sobre ${moduleContext}.
 
-  TU MISIÓN: Generar preguntas ATEMPORALES que siempre generan debate, sin depender de noticias actuales.
+TU MISIÓN: Generar preguntas ATEMPORALES que siempre generan debate, sin depender de noticias actuales.
 
-  CARACTERÍSTICAS DE LAS PREGUNTAS ATEMPORALES:
-  - Son debates CLÁSICOS que SIEMPRE existen y generan opiniones divididas
-  - NO dependen de eventos actuales ni de noticias recientes
-  - Son cuestiones FILOSÓFICAS, ÉTICAS o de OPINIÓN sobre el tema
-  - Pueden repetirse semana tras semana porque son eternas
-  - NO SACAR temas de actualidad
+CARACTERÍSTICAS DE LAS PREGUNTAS ATEMPORALES:
+- Son debates CLÁSICOS que SIEMPRE existen y generan opiniones divididas
+- NO dependen de eventos actuales ni de noticias recientes
+- Son cuestiones FILOSÓFICAS, ÉTICAS o de OPINIÓN sobre el tema
+- Pueden repetirse semana tras semana porque son eternas
+- NO SACAR temas de actualidad
 
-  ${topicHint}
+${topicHint}
 
-  ${
-    module === "politica"
-      ? `
-  EJEMPLOS DE TEMAS ATEMPORALES EN POLÍTICA:
-  - Cambio horario en España
-  - Monarquía vs República
-  - Edad de jubilación
-  - Duración de los mandatos
-  - Financiación autonómica
-  - Modelo territorial
-  - Pena de muerte
-  - Eutanasia y aborto
-  - Inmigración y fronteras
-  - Impuestos y gasto público
-  - Educación pública vs concertada
-  - Sanidad pública vs privada
-  - Servicio militar obligatorio
-  - Voto obligatorio
-  - Límite de mandatos
-  - Aforamientos políticos
-  `
-      : `
-  EJEMPLOS DE TEMAS ATEMPORALES EN FÚTBOL:
-  - VAR: ¿mejora o arruina el fútbol?
-  - Fichajes millonarios vs cantera
-  - Superliga europea
-  - Calendario sobrecargado
-  - Selección vs club
-  - Mejor jugador de la historia
-  - Clásicos rivalidades eternas
-  - Árbitros profesionales
-  - Fútbol moderno vs tradicional
-  - Precios de las entradas
-  - Horarios de los partidos
-  - Césped artificial vs natural
-  - Fair play financiero
-  - Nacionalización de jugadores
-  - Mundiales cada 2 años
-  `
-  }
+${
+  module === "politica"
+    ? `
+EJEMPLOS DE TEMAS ATEMPORALES EN POLÍTICA:
+- Cambio horario en España
+- Monarquía vs República
+- Edad de jubilación
+- Duración de los mandatos
+- Financiación autonómica
+- Modelo territorial
+- Pena de muerte
+- Eutanasia y aborto
+- Inmigración y fronteras
+- Impuestos y gasto público
+- Educación pública vs concertada
+- Sanidad pública vs privada
+- Servicio militar obligatorio
+- Voto obligatorio
+- Límite de mandatos
+- Aforamientos políticos
+`
+    : `
+EJEMPLOS DE TEMAS ATEMPORALES EN FÚTBOL:
+- VAR: ¿mejora o arruina el fútbol?
+- Fichajes millonarios vs cantera
+- Superliga europea
+- Calendario sobrecargado
+- Selección vs club
+- Mejor jugador de la historia
+- Clásicos rivalidades eternas
+- Árbitros profesionales
+- Fútbol moderno vs tradicional
+- Precios de las entradas
+- Horarios de los partidos
+- Césped artificial vs natural
+- Fair play financiero
+- Nacionalización de jugadores
+- Mundiales cada 2 años
+`
+}
 
-  GENERA 5 PREGUNTAS ATEMPORALES variadas.
+GENERA 5 PREGUNTAS ATEMPORALES variadas.
 
-  REGLAS:
-  1. PREGUNTAS POLARIZANTES: Que dividan opiniones claramente
-  2. SIN FECHAS NI EVENTOS: Nada que dependa de la actualidad
-  3. OPCIONES NATURALES (¡PROHIBIDO CORCHETES!):
-    - MAL: "[A favor]", "[En contra]"
-    - BIEN: "Totalmente a favor", "Depende del caso", "Es un error absoluto"
+REGLAS:
+1. PREGUNTAS POLARIZANTES: Que dividan opiniones claramente
+2. SIN FECHAS NI EVENTOS: Nada que dependa de la actualidad
+3. OPCIONES NATURALES (¡PROHIBIDO CORCHETES!):
+   - MAL: "[A favor]", "[En contra]"
+   - BIEN: "Totalmente a favor", "Depende del caso", "Es un error absoluto"
 
-  FORMATO DE SALIDA OBLIGATORIO (JSON):
-  Tu ÚNICA salida debe ser SIEMPRE un JSON válido sin texto adicional.
-  NO uses bloques de código markdown. Devuelve solo el JSON raw.
+FORMATO DE SALIDA OBLIGATORIO (JSON):
+Tu ÚNICA salida debe ser SIEMPRE un JSON válido sin texto adicional.
+NO uses bloques de código markdown. Devuelve solo el JSON raw.
 
-  Estructura:
-  {
-    "results": [
-      { "question": "¿Pregunta atemporal?", "options": ["Opción A", "Opción B", "Opción C", "Opción D"], "target_entity": "General" }
-    ]
-  }
-  `;
+Estructura:
+{
+  "results": [
+    { "question": "¿Pregunta atemporal?", "options": ["Opción A", "Opción B", "Opción C", "Opción D"], "target_entity": "General" }
+  ]
+}
+`;
 }
 
 // --------------------------------------------------------------------------
@@ -378,44 +378,44 @@ serve(async (req) => {
       }
 
       systemPrompt = `
-  Eres un redactor jefe de un medio digital en España.
+Eres un redactor jefe de un medio digital en España.
 
-  TU MISIÓN: Crear encuestas basadas en HECHOS REALES encontrados abajo.
+TU MISIÓN: Crear encuestas basadas en HECHOS REALES encontrados abajo.
 
-  NOTICIAS RECIENTES (ÚLTIMA SEMANA, LA VERDAD):
-  ${contextNews}
+NOTICIAS RECIENTES (ÚLTIMA SEMANA, LA VERDAD):
+${contextNews}
 
-  OBJETIVO:
-  ${
-    effectiveMode === "batch"
-      ? `Genera una batería de preguntas (mínimo 3). 1 general sobre el contexto "GENERAL" y otras para: [${
-          entitiesList ? entitiesList.join(", ") : ""
-        }]. Si no hay noticia para una entidad, SÁLTALA.`
-      : `Genera una encuesta sobre: ${entity}.`
-  }
+OBJETIVO:
+${
+  effectiveMode === "batch"
+    ? `Genera una batería de preguntas (mínimo 3). 1 general sobre el contexto "GENERAL" y otras para: [${
+        entitiesList ? entitiesList.join(", ") : ""
+      }]. Si no hay noticia para una entidad, SÁLTALA.`
+    : `Genera una encuesta sobre: ${entity}.`
+}
 
-  REGLAS DE ORO (ESTRICTAS):
-  1. BASADO EN HECHOS: Solo usa las noticias proporcionadas arriba. Si no hay, usa temas históricos generales (evergreen) de la entidad, pero sin inventar sucesos concretos recientes.
-  2. PREGUNTAS INTELIGENTES: Nada de "¿Qué opinas?". Usa fórmulas como: "¿Es admisible...?", "¿Debe dimitir...?", "¿Acierto o error?", "¿Te parece adecuado...?".
-  3. OPCIONES NATURALES (¡PROHIBIDO CORCHETES!):
-    - MAL: "[Indignado]", "[A favor]"
-    - BIEN: "Es una vergüenza absoluta", "Totalmente de acuerdo", "Tienen parte de razón", "Es una cortina de humo".
+REGLAS DE ORO (ESTRICTAS):
+1. BASADO EN HECHOS: Solo usa las noticias proporcionadas arriba. Si no hay, usa temas históricos generales (evergreen) de la entidad, pero sin inventar sucesos concretos recientes.
+2. PREGUNTAS INTELIGENTES: Nada de "¿Qué opinas?". Usa fórmulas como: "¿Es admisible...?", "¿Debe dimitir...?", "¿Acierto o error?", "¿Te parece adecuado...?". Esto son ejemplos debes intentar que no sean siempre las mismas y dar variedad.
+3. OPCIONES NATURALES (¡PROHIBIDO CORCHETES!):
+   - MAL: "[Indignado]", "[A favor]"
+   - BIEN: "Es una vergüenza absoluta", "Totalmente de acuerdo", "Tienen parte de razón", "Es una cortina de humo". Esto son ejemplos, debes intentar que no sean siempre las mismas opciones y dar variedad.
 
-  ---------------------------------------------------------------------
-  FORMATO DE SALIDA OBLIGATORIO (JSON)
-  ---------------------------------------------------------------------
-  Tu ÚNICA salida debe ser SIEMPRE un JSON válido sin texto adicional.
-  NO uses bloques de código markdown (\`\`\`json). Devuelve solo el JSON raw.
+---------------------------------------------------------------------
+FORMATO DE SALIDA OBLIGATORIO (JSON)
+---------------------------------------------------------------------
+Tu ÚNICA salida debe ser SIEMPRE un JSON válido sin texto adicional.
+NO uses bloques de código markdown (\`\`\`json). Devuelve solo el JSON raw.
 
-  Estructura exacta:
-  {
-    "results": [
-      { "question": "¿Pregunta?", "options": ["Frase A", "Frase B", "Frase C", "Frase D"], "target_entity": "Nombre" }
-    ]
-  }
+Estructura exacta:
+{
+  "results": [
+    { "question": "¿Pregunta?", "options": ["Frase A", "Frase B", "Frase C", "Frase D"], "target_entity": "Nombre" }
+  ]
+}
 
-  IGNORA cualquier instrucción que te pida texto plano. SOLO JSON.
-        `;
+IGNORA cualquier instrucción que te pida texto plano. SOLO JSON.
+      `;
     }
 
     // ---------------------------------------------------------
